@@ -94,12 +94,13 @@ write.csv(unique(data.weather),
 data.geo <- read.csv("prairie_saved/data/raw/geography.csv")
 
 data.geo$SiteBlockTransect <- paste(data.geo$Site,
+                                    data.geo$BurnUnburned,
                                     data.geo$Block,
                                     data.geo$Transect,
                                     sep="-")
 
 
-table(data.geo$SiteBlockTransect)
+table(data.geo$SiteBlockTransect)[table(data.geo$SiteBlockTransect) > 1]
 
 
 data.geo <- data.geo[!duplicated(data.geo$SiteBlockTransect),]

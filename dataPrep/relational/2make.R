@@ -13,7 +13,7 @@ library(RSQLite)
 
 conditions <- read.csv("prairie_saved/data/relational/original/conditions.csv", as.is=TRUE)
 specimens <- read.csv("prairie_saved/data/relational/original/specimens.csv", as.is=TRUE)
-geo <- read.csv("prairie_saved/data/relational/original/geography.csv", as.is=TRUE)
+geography <- read.csv("prairie_saved/data/relational/original/geography.csv", as.is=TRUE)
 veg <- read.csv("prairie_saved/data/relational/original/veg.csv", as.is=TRUE)
 
 ## *******************************************************
@@ -33,7 +33,7 @@ con <- dbConnect(dbDriver("SQLite"), dbname='prairie_saved/prairie.db')
 ## Temporarily identify site, block, transect combinations
 keep <- c("Site", "BurnUnburned", "Block", "Transect")
 
-geography$geo.code <- apply(geo[keep], 1, paste, collapse=";")
+geography$geo.code <- apply(geography[keep], 1, paste, collapse=";")
 conditions$geo.code <- apply(conditions[keep], 1, paste, collapse=";")
 specimens$geo.code <- apply(specimens[keep], 1, paste, collapse=";")
 veg$geo.code <- apply(veg[keep], 1, paste, collapse=";")
@@ -41,15 +41,11 @@ veg$geo.code <- apply(veg[keep], 1, paste, collapse=";")
 keep <- c("geo.code", "Country",
           "State", "County",  "Lat", "Long", "CRS", "Locality")
 
-geography <- unique(geo[keep])
-## next sort into alphabetical order
-geography <- geography[match(sort(geography$Site), geography$Site),]
-
-
+geography <- unique(geography[keep])
 
 geography <- cbind(GeographyPK=seq_len(nrow(geography)), geography)
 rownames(geography) <- NULL
-dbWriteTable(con, "tblGeography", geography, row.names=FALSE)
+dbWriteTable(con, "tblGeography", geography, row.names=FALSE, overwrite=TRUE)
 
 ## Propagate geography key to the conditions table.
 conditions$GeographyFK <-
