@@ -27,13 +27,15 @@ local.path
 ## *****************************************************************
 
 setwd(local.path)
-source('cascades-meadows/dataPrep/relational/1prep.R')
+source('prairie/dataPrep/relational/1prep.R')
 
 setwd(local.path)
-source('cascades-meadows/dataPrep/relational/2make.R')
+source('prairie/dataPrep/relational/2make.R')
 
 setwd(local.path)
-source('cascades-meadows/dataPrep/relational/3join.R')
+source('prairie/dataPrep/relational/3join.R')
+
+## stop here!!!!!
 
 ## *****************************************************************
 ## prep specimen data
@@ -41,7 +43,7 @@ source('cascades-meadows/dataPrep/relational/3join.R')
 rm(list=ls()[ls() != "local.path"])
 
 setwd(file.path(paste0(local.path,
-                       "/cascades-meadows/dataPrep")))
+                       "/prairie/dataPrep")))
 # Create a folder for data
 save.dir <- "../data"
 if(!dir.exists(save.dir)) {
@@ -49,7 +51,7 @@ if(!dir.exists(save.dir)) {
 }
 
 spec <-
-  read.csv("../../cascades-meadows_saved/data/relational/traditional/specimens-complete.csv",
+  read.csv("../../prairie_saved/data/relational/traditional/specimens-complete.csv",
            stringsAsFactors=FALSE)
 
 ## trait data
@@ -65,7 +67,7 @@ spec <- subset(spec, SampleRound != "SV")
 
 ## create a master sheet of conditions from the original data
 surveys.master <-
-  read.csv("../../cascades-meadows_saved/data/relational/original/conditions.csv")
+  read.csv("../../prairie_saved/data/relational/original/conditions.csv")
 
 
 condition.cols <-  c("Site", "SampleRound",
@@ -662,7 +664,7 @@ save(spec, file='../data/spec_net.Rdata')
 ## ***********************************************************************
 
 veg <-
-  read.csv("../../cascades-meadows_saved/data/relational/traditional/veg-complete.csv")
+  read.csv("../../prairie_saved/data/relational/traditional/veg-complete.csv")
 
 ## didn't count the exact number of flowers in 2022, use
 ## midpoints of bins
@@ -681,10 +683,10 @@ print("veg missing IDs")
 dim(veg[veg$PlantGenusSpecies == "",])
 
 write.csv(veg[veg$PlantGenusSpecies == "",],
-          file="../../cascades-meadows_saved/data/cleaning/veg_no_id.csv")
+          file="../../prairie_saved/data/cleaning/veg_no_id.csv")
 
 #veg.checked.plant.names <-
-#  read.csv(file="../../cascades-meadows_saved/data/checkedfloralnames.csv")
+#  read.csv(file="../../prairie_saved/data/checkedfloralnames.csv")
 
 #veg <- fixPlantNames(veg, "PlantGenusSpecies",
 #                     veg.checked.plant.names)
