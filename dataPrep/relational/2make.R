@@ -213,17 +213,29 @@ PlantGenus[is.na(PlantGenus)] <- ''
 PlantSpecies <- sapply(strsplit(plants, ' '), function(x) x[2])
 PlantSpecies[is.na(PlantSpecies)] <- ''
 
+PlantEpi <- sapply(strsplit(plants, ' '), function(x) x[3])
+PlantEpi[is.na(PlantEpi)] <- ''
+
+PlantSubSpeciesVar <- sapply(strsplit(plants, ' '), function(x) x[4])
+PlantSubSpeciesVar[is.na(PlantSubSpeciesVar)] <- ''
+
+
 plants <- data.frame(PlantPK=seq_along(PlantGenus),
-                     PlantGenus, PlantSpecies)
+                     PlantGenus, PlantSpecies, PlantEpi,
+                     PlantSubSpeciesVar)
 
 rownames(plants) <- NULL
-dbWriteTable(con, 'tblPlant', plants, row.names=FALSE)
+dbWriteTable(con, 'tblPlant', plants, row.names=FALSE,
+             overwrite=TRUE)
 
 ## Propagate plant key to the specimens table.
 specimens.plant.sp <- specimens[keep][[1]]
 
 plants.plant.sp <- fix.white.space(paste(plants$PlantGenus,
-                                         plants$PlantSpecies))
+                                         plants$PlantSpecies,
+                                         plants$PlantEpi,
+                                         plants$PlantSubSpeciesVar
+                                         ))
 
 ## propogate plant key to specimens
 specimens$PlantFK <- plants$PlantPK[match(specimens.plant.sp,

@@ -35,6 +35,8 @@ spec.data$Method[spec.data$Year == "2025"] <- "Net"
 ## check sites
 unique(spec.data$Site)
 
+spec.data$PlantGenusSpecies <- fix.white.space(spec.data$PlantGenusSpecies)
+
 ## ## add plant data
 ## plant.keys <- read.csv("prairie_saved/data/raw/plant.csv", stringsAsFactors=FALSE)
 
