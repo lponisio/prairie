@@ -1037,4 +1037,5 @@ sp.ids <- list()
 #   temp.id = c()
 # )
 
-sp.ids
+source('prairie/dataPrep/speciesIDs/src/cleaning.R')
+checkSpeciesIDs(sp.ids = sp.ids, project_abbrev = "PI-")
