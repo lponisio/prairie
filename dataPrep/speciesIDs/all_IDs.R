@@ -63,7 +63,7 @@ sp.ids[["Agapostemon_subtilior_female"]] <- list(
     Caste = "",
     Author = "Cresson, 1872",
     Determiner = "A.S.Jackson",
-    temp.id = c(332, 596, 700
+    temp.id = c(332, 596, 700, 1561
     )
 )
 
@@ -123,25 +123,25 @@ sp.ids[["Apis_mellifera_female"]] <- list(
                 1300, 1301, 1302, 1304, 1306, 1309, 1345, 1350, 1353, 1357, 1366, 
                 1367, 1368, 1369, 1372, 1376, 1379, 1384, 1385, 1388, 1393, 1394, 
                 1396, 1397, 1402, 1404, 1405, 1406, 1412, 1415, 1421, 1423, 1424, 
-                1430, 1431, 1438, 1440, 1441
+                1430, 1431, 1438, 1440, 1441, 2056
     )
 )
 
-# sp.ids[["Bombus_caliginosus_female"]] <- list(
-#
-#     Order = "Hymenoptera",
-#     Family = "Apidae",
-#     Genus = "Bombus",
-#     SubGenus = "Pyrobombus",
-#     Species = "caliginosus",
-#     SubSpecies = "",
-#     Sex = "female",
-#     Caste = "worker",
-#     Author = "Frison",
-#     Determiner = "", 
-#     temp.id = c(
-#     )
-# )
+sp.ids[["Bombus_caliginosus_female"]] <- list(
+
+    Order = "Hymenoptera",
+    Family = "Apidae",
+    Genus = "Bombus",
+    SubGenus = "Pyrobombus",
+    Species = "caliginosus",
+    SubSpecies = "",
+    Sex = "female",
+    Caste = "worker",
+    Author = "Frison",
+    Determiner = "",
+    temp.id = c(1667, 1733, 1796, 1812
+    )
+)
 
 # sp.ids[["Bombus_caliginosus_male"]] <- list(
 #
@@ -172,7 +172,8 @@ sp.ids[["Bombus_fervidus_female"]] <- list(
     Author = "Fabricius, 1798",
     Determiner = "A.S. Jackson",
     temp.id = c(143, 207, 326, 349, 404, 410, 411, 417, 420, 433, 481,541, 
-                661, 683, 688, 955, 956, 782, 1204, 1277, 1391, 1392
+                661, 683, 688, 955, 956, 782, 1204, 1277, 1391, 1392, 1915, 
+                1917, 1933, 1949, 1950, 1953, 1954, 1956, 1957, 1978, 1983
     )
 )
 
@@ -204,7 +205,7 @@ sp.ids[["Bombus_flavifrons_female"]] <- list(
     Caste = "worker",
     Author = "Cresson, 1863",
     Determiner = "A.S. Jackson",
-    temp.id = c(166, 452, 458, 784
+    temp.id = c(166, 452, 458, 784, 1749
     )
 )
 
@@ -236,7 +237,7 @@ sp.ids[["Bombus_flavifrons_female"]] <- list(
 #     Caste = "worker",
 #     Author = "Nylander, 1848",
 #     Determiner = "", 
-#     temp.id = c(
+#     temp.id = c(1658
 #     )
 # )
 
@@ -252,7 +253,7 @@ sp.ids[["Bombus_mixtus_female"]] <- list(
     Caste = "worker",
     Author = "Cresson, 1878",
     Determiner = "A.S. Jackson",
-    temp.id = c(456, 1305
+    temp.id = c(456, 1305, 1476, 1480, 1678 
     )
 )
 
@@ -367,7 +368,10 @@ sp.ids[["Bombus_vosnesenskii_female"]] <- list(
                 460, 463, 474, 498, 535, 538, 542, 543, 571, 572, 612, 614, 
                 615, 621, 634, 741, 746, 750, 804, 839, 999, 1020, 1027, 
                 1036, 1067, 1072, 1073, 1099, 1124, 1181, 1190, 1192, 1198, 
-                1202, 1226, 1238, 1311, 1333, 1346, 1347, 1382, 1409, 1418
+                1202, 1226, 1238, 1311, 1333, 1346, 1347, 1382, 1409, 1418, 
+                1702, 1711, 1721, 1722, 1730, 1731, 1739, 1765, 1767, 1775, 
+                1776, 1795, 1798, 1802, 1803, 1804, 1805, 1809, 1810, 1819, 
+                1842, 1888, 1894, 1897, 1961, 1966, 1967, 2017, 2018, 2054
     )
 )
 
@@ -434,7 +438,11 @@ sp.ids[["Ceratina_acantha_female"]] <- list(
     temp.id = c(2, 8, 9, 10, 87, 165, 175, 185, 270, 273, 274, 277, 291, 
                 293, 321, 329, 335, 343, 348, 369, 374, 382, 383, 385, 
                 467, 468, 482, 529, 533, 548,551, 557, 657, 658, 682, 
-                690, 691, 692, 734, 831, 838, 1060, 1242, 1243, 1354, 1361
+                690, 691, 692, 734, 831, 838, 1060, 1242, 1243, 1354, 1361, 
+                1448, 1543, 1546, 1554, 1556, 1558, 1566, 1570, 1582, 1708, 
+                1717, 1865, 1869, 1871, 1872, 1874, 1879, 1880, 1881, 1882, 
+                1903, 1908, 1911, 1912, 1914, 1916, 1923, 1927, 1964, 1968, 
+                1973, 2013, 2015, 2057, 2060, 2061
     )
 )
 
@@ -466,7 +474,7 @@ sp.ids[["Protosmia_rubifloris_female"]] <- list(
   Caste = "",
   Author = "Cockerell, 1898",
   Determiner = "A.S. Jakcson",
-  temp.id = c(201, 368, 376
+  temp.id = c(201, 368, 376, 1536
   )
 )
 
@@ -630,6 +638,22 @@ sp.ids[["Andrena_evoluta_female"]] <- list(
   )
 )
 
+sp.ids[["Andrena_caerulea_female"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Andrenidae",
+  Genus = "Andrena",
+  SubGenus = "",
+  Species = "caerulea",
+  SubSpecies = "",
+  Sex = "female",
+  Caste = "",
+  Author = "Smith, 1879",
+  Determiner = "A.S.Jackson",
+  temp.id = c(1475, 1491, 1493, 1520, 1523, 1614, 1625
+  )
+)
+
 sp.ids[["Andrena_candida_female"]] <- list(
   
   Order = "Hymenoptera",
@@ -674,7 +698,23 @@ sp.ids[["Andrena_nigrocaerulea_female"]] <- list(
   Caste = "",
   Author = "Cockerell, 1897",
   Determiner = "A.S.Jackson",
-  temp.id = c(205
+  temp.id = c(205, 1518, 1522, 1623, 1624, 1630, 1652
+  )
+)
+
+sp.ids[["Andrena_auricoma_female"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Andrenidae",
+  Genus = "Andrena",
+  SubGenus = "",
+  Species = "auricoma",
+  SubSpecies = "",
+  Sex = "female",
+  Caste = "",
+  Author = "Smith, 1879",
+  Determiner = "A.S.Jackson",
+  temp.id = c(1603, 1604, 1758
   )
 )
 
@@ -690,7 +730,7 @@ sp.ids[["Andrena_angustitarsata_female"]] <- list(
   Caste = "",
   Author = "Viereck, 1904",
   Determiner = "A.S.Jackson",
-  temp.id = c(16
+  temp.id = c(16, 1640, 1743
   )
 )
 
@@ -707,6 +747,38 @@ sp.ids[["Andrena_astragali_female"]] <- list(
   Author = "Viereck & Cockerell, 1914",
   Determiner = "A.S.Jackson",
   temp.id = c(202
+  )
+)
+
+sp.ids[["Andrena_astragali_male"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Andrenidae",
+  Genus = "Andrena",
+  SubGenus = "Ptilandrena",
+  Species = "astragali",
+  SubSpecies = "",
+  Sex = "male",
+  Caste = "",
+  Author = "Viereck & Cockerell, 1914",
+  Determiner = "A.S.Jackson",
+  temp.id = c(1753
+  )
+)
+
+sp.ids[["Andrena_orthocarpi_female"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Andrenidae",
+  Genus = "Andrena",
+  SubGenus = "",
+  Species = "orthocarpi",
+  SubSpecies = "",
+  Sex = "female",
+  Caste = "",
+  Author = "Cockerell, 1936",
+  Determiner = "A.S.Jackson",
+  temp.id = c(1645, 1470, 1473
   )
 )
 
@@ -739,6 +811,22 @@ sp.ids[["Andrena_melanochroa_female"]] <- list(
   Author = "Cockerell, 1898",
   Determiner = "A.S.Jackson",
   temp.id = c(35
+  )
+)
+
+sp.ids[["Andrena_microchlora_female"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Andrenidae",
+  Genus = "Andrena",
+  SubGenus = "",
+  Species = "microchlora",
+  SubSpecies = "",
+  Sex = "female",
+  Caste = "",
+  Author = "Cockerell, 1922",
+  Determiner = "A.S.Jackson",
+  temp.id = c(1639, 1725
   )
 )
 
@@ -818,23 +906,23 @@ sp.ids[["Nomada_cf. edwardsii_male"]] <- list(
   Caste = "",
   Author = "Cresson, 1878",
   Determiner = "A.S.Jackson",
-  temp.id = c(67, 69, 77
+  temp.id = c(67, 69, 77, 1670
   )
 )
 
-sp.ids[["Nomada_Sp.1_female"]] <- list(
+sp.ids[["Nomada_sp._female"]] <- list(
   
   Order = "Hymenoptera",
   Family = "Apidae",
   Genus = "Nomada",
   SubGenus = "",
-  Species = "Sp.1",
+  Species = "sp.",
   SubSpecies = "",
   Sex = "female",
   Caste = "",
   Author = "",
   Determiner = "A.S.Jackson",
-  temp.id = c(89, 278, 555
+  temp.id = c(89, 278, 555, 1552
   )
 )
 
@@ -867,7 +955,8 @@ sp.ids[["Ceratina_acantha_male"]] <- list(
     Author = "Provancher, 1895",
     Determiner = "A.S.Jackson",
     temp.id = c(80, 86, 222, 223, 227,242, 243, 285, 288, 292, 294, 
-                336, 544, 1074, 1241, 1247
+                336, 544, 1074, 1241, 1247, 1455, 1542, 1544, 1548, 1559, 
+                1562, 1573, 1878, 1883
     )
 )
 
@@ -884,7 +973,8 @@ sp.ids[["Ceratina_micheneri_male"]] <- list(
   Author = "Daily, 1973",
   Determiner = "A.S.Jackson",
   temp.id = c(85, 93, 144, 174, 179, 224, 234, 253, 267, 287, 302, 306, 
-              340, 524, 558
+              340, 524, 558, 1454, 1512, 1528, 1539, 1540, 1691, 1737, 
+              1801, 1866, 1867
   )
 )
 
@@ -902,7 +992,8 @@ sp.ids[["Ceratina_micheneri_female"]] <- list(
   Determiner = "A.S.Jackson",
   temp.id = c(237, 256, 301, 341, 483, 540, 554, 556, 559, 560, 562, 567, 
               576, 583, 588, 592, 669, 693, 739, 1070, 1066, 1075, 1077, 
-              1080, 1182, 1332
+              1080, 1182, 1332, 1499, 1618, 1868, 1870, 1889, 1892, 1896, 
+              2010, 2056
   )
 )
 
@@ -970,21 +1061,21 @@ sp.ids[["Ceratina_nanula_female"]] <- list(
 #     )
 # )
 
-# sp.ids[["Halictus_confusus_female"]] <- list(
-#
-#     Order = "Hymenoptera",
-#     Family = "Halictidae",
-#     Genus = "Halictus",
-#     SubGenus = "Nealictus",
-#     Species = "confusus",
-#     SubSpecies = "",
-#     Sex = "female",
-#     Caste = "",
-#     Author = "Smith, 1853",
-#     Determiner = "", 
-#     temp.id = c(
-#     )
-# )
+ sp.ids[["Halictus_confusus_female"]] <- list(
+
+     Order = "Hymenoptera",
+     Family = "Halictidae",
+     Genus = "Halictus",
+     SubGenus = "Nealictus",
+     Species = "confusus",
+     SubSpecies = "",
+     Sex = "female",
+     Caste = "",
+     Author = "Smith, 1853",
+     Determiner = "", 
+     temp.id = c(1488
+     )
+ )
 
 sp.ids[["Halictus_rubicundus_female"]] <- list(
 
@@ -998,7 +1089,8 @@ sp.ids[["Halictus_rubicundus_female"]] <- list(
     Caste = "",
     Author = "Smith, 1853",
     Determiner = "A.S.Jackson",
-    temp.id = c(247, 319, 354, 584, 1258
+    temp.id = c(247, 319, 354, 584, 1258, 1492, 1647, 1825, 1828, 1829, 1831, 
+                1492, 1647, 1825, 1828, 1829, 1831, 1844
     )
 )
 
@@ -1036,7 +1128,8 @@ sp.ids[["Halictus_farinosus_female"]] <- list(
                 926, 928, 929, 930, 936, 940, 946, 947, 948, 949, 950, 952, 962, 
                 964, 967, 968, 970, 973, 978, 1004, 1085, 1091, 1095, 1110, 1111, 
                 1184, 1187, 1194, 1196, 1197, 1200, 1201, 1212, 1213, 1223, 1224, 
-                1235, 1380, 1395, 1426
+                1235, 1380, 1395, 1426, 1524, 1530, 1673, 1674, 1692, 1714, 1760, 
+                1789, 1836, 1838, 1839, 1841, 1843, 1847, 1895, 2014
     )
 )
 
@@ -1074,7 +1167,8 @@ sp.ids[["Halictus_ligatus_female"]] <- list(
                 1183, 1189, 1210, 1249, 1255, 1267, 1271, 1274, 1275, 1276, 1286,
                 1288, 1310 ,1313, 1315,1316, 1318, 1319, 1320, 1326, 1330, 1334, 
                 1337, 1338, 1358, 1364, 1365, 1371, 1375, 1377, 1387, 1389, 1407, 
-                1410, 1413, 1417, 1419
+                1410, 1413, 1417, 1419, 1571, 1589, 1635, 1641, 1679, 1683, 1690, 
+                1701, 1728, 1746, 1774, 1777, 1782, 1785, 1797, 1980
     )
 )
 
@@ -1109,7 +1203,7 @@ sp.ids[["Halictus_tripartitus_female"]] <- list(
     Determiner = "A.S.Jackson",
     temp.id = c(11, 12, 31, 34, 154, 226, 235, 239, 245, 250, 261, 276, 286, 
                 517, 655, 656, 673, 681, 685, 803, 820, 821, 825, 826, 842, 
-                846, 893, 1098, 1233, 1246, 1261, 1356, 1374
+                846, 893, 1098, 1233, 1246, 1261, 1356, 1374, 1661
     )
 )
 
@@ -1173,7 +1267,7 @@ sp.ids[["Hoplitis_grinnelli_female"]] <- list(
   Caste = "",
   Author = "Cockerell, 1910",
   Determiner = "A.S. Jackson",
-  temp.id = c(390, 578
+  temp.id = c(390, 578, 1572, 1709, 1928
   )
 )
 
@@ -1189,7 +1283,7 @@ sp.ids[["Hoplitis_grinnelli_male"]] <- list(
   Caste = "",
   Author = "Cockerell, 1910",
   Determiner = "A.S. Jackson",
-  temp.id = c(304, 338
+  temp.id = c(304, 338, 1541, 1636
   )
 )
 
@@ -1241,7 +1335,11 @@ sp.ids[["Lasioglossum_olympiae_female"]] <- list(
               107, 108, 109, 113, 193, 197, 252, 297, 316, 351, 352, 357, 
               358, 359, 360, 361, 363, 365, 373, 381, 400, 401, 403, 415, 
               475, 476, 477, 478, 479, 480, 490, 491, 492, 497, 500, 510, 
-              668, 763, 864
+              668, 763, 864, 1449, 1452, 1458, 1459, 1460, 1467, 1479, 1486, 
+              1497, 1498, 1500, 1507, 1509, 1521, 1553, 1586, 1587, 1588, 
+              1590, 1593, 1600, 1601, 1615, 1638, 1644, 1650, 1706, 1707, 
+              1713, 1716, 1724, 1732, 1742, 1751, 1826, 1846, 1902, 1925, 
+              1926, 1932, 1942, 1959, 1965, 2000, 2035
   )
 )
 
@@ -1339,7 +1437,7 @@ sp.ids[["Lasioglossum_incompletum_female"]] <- list(
     Determiner = "A.S.Jackson",
     temp.id = c(74, 162, 171, 176, 225, 388, 503, 637, 652, 664, 687, 718, 
                 725, 777, 783, 795, 805, 809, 834, 979, 980, 991, 1033, 
-                1237, 1259, 1343, 1386, 1414, 1416
+                1237, 1259, 1343, 1386, 1414, 1416, 1457, 1736, 1822, 1900
     )
 )
 
@@ -1386,7 +1484,7 @@ sp.ids[["Lasioglossum_incompletum_female"]] <- list(
 #     Caste = "",
 #     Author = "Crawford, 1907",
 #     Determiner = "", 
-#     temp.id = c(
+#     temp.id = c(1468, 1503
 #     )
 # )
 
@@ -1450,7 +1548,7 @@ sp.ids[["Lasioglossum_sisymbrii_female"]] <- list(
     Caste = "",
     Author = "Cockerell, 1895",
     Determiner = "A.S.Jackson",
-    temp.id = c(120, 372, 603, 604, 643, 663, 712, 1317
+    temp.id = c(120, 372, 603, 604, 643, 663, 712, 1317, 1936
     )
 )
 
@@ -1498,7 +1596,10 @@ sp.ids[["Lasioglossum_titusi_female"]] <- list(
                 944, 961, 963, 966, 981, 983, 985, 993, 1024, 1039, 1041, 
                 1042, 1052, 1053, 1054, 1057, 1059, 1069, 1078, 1088, 1092, 
                 1093, 1094, 1096, 1097, 1101, 1103, 1140, 1220, 1248, 1292, 
-                1327, 1427, 1436
+                1327, 1427, 1436, 1526, 1665, 1672, 1682, 1684, 1689, 1696, 
+                1768, 1773, 1854, 1857, 1858, 1884, 1907, 1919, 1920, 1948, 
+                1955, 1970, 1975, 1984, 1986, 1990, 1996, 1999, 2001, 2020, 
+                2043, 2052
     )
 )
 
@@ -1516,7 +1617,7 @@ sp.ids[["Lasioglossum_villosulum_female"]] <- list(
     Determiner = "A.S.Jackson",
     temp.id = c(36, 75, 79, 97, 98, 99, 100, 115, 137, 140, 141, 142, 
                 150, 180, 251, 263, 333, 389, 396, 459, 699, 801, 906, 
-                965, 969, 1001, 1227, 1270
+                965, 969, 1001, 1227, 1270, 1594, 1595, 1596, 1759, 1939
     )
 )
 
@@ -1564,7 +1665,7 @@ sp.ids[["Lasioglossum_kincaidii_female"]] <- list(
   Caste = "",
   Author = "Cockerell, 1898",
   Determiner = "A.S.Jackson",
-  temp.id = c(118, 130, 135, 136, 145, 521, 527, 528, 530, 1222, 1230, 1231
+  temp.id = c(118, 130, 135, 136, 145, 521, 527, 528, 530, 1222, 1230, 1231, 1750
   )
 )
 
@@ -1596,7 +1697,7 @@ sp.ids[["Lasioglossum_ruidosense_female"]] <- list(
   Caste = "",
   Author = "Cockerell, 1897",
   Determiner = "",
-  temp.id = c(172
+  temp.id = c(172, 1532
   )
 )
 
@@ -1613,6 +1714,22 @@ sp.ids[["Lasioglossum_pacatum_female"]] <- list(
   Author = "Sandhouse, 1924",
   Determiner = "",
   temp.id = c(650
+  )
+)
+
+sp.ids[["Lasioglossum_pacificum_female"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Halictidae",
+  Genus = "Lasioglossum",
+  SubGenus = "",
+  Species = "pacificum",
+  SubSpecies = "",
+  Sex = "female",
+  Caste = "",
+  Author = "Cockerell, 1898",
+  Determiner = "A.S. Jackson",
+  temp.id = c(1620
   )
 )
 
@@ -1660,7 +1777,23 @@ sp.ids[["Eucera_edwardsii_male"]] <- list(
   Caste = "",
   Author = "Cresson, 1879",
   Determiner = "A.S. Jackson",
-  temp.id = c(133, 236
+  temp.id = c(133, 236, 1583, 1585
+  )
+)
+
+sp.ids[["Eucera_frater_female"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Apidae",
+  Genus = "Eucera",
+  SubGenus = "",
+  Species = "frater",
+  SubSpecies = "",
+  Sex = "female",
+  Caste = "",
+  Author = "Cresson, 1879",
+  Determiner = "A.S. Jackson",
+  temp.id = c(1568
   )
 )
 
@@ -1696,6 +1829,22 @@ sp.ids[["Eucera_cordleyi_female"]] <- list(
   )
 )
 
+sp.ids[["Megachile_melanphaea_male"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Megachilidae",
+  Genus = "Megachile",
+  SubGenus = "",
+  Species = "melanophaea",
+  SubSpecies = "",
+  Sex = "male",
+  Caste = "",
+  Author = "Smith, 1853",
+  Determiner = "A.S.Jakcson",
+  temp.id = c(2005
+  )
+)
+
 sp.ids[["Megachile_montivaga_female"]] <- list(
 
     Order = "Hymenoptera",
@@ -1708,8 +1857,24 @@ sp.ids[["Megachile_montivaga_female"]] <- list(
     Caste = "",
     Author = "Cresson, 1878",
     Determiner = "A.S.Jakcson",
-    temp.id = c(745, 747, 927
+    temp.id = c(745, 747, 927, 2053
     )
+)
+
+sp.ids[["Megachile_montivaga_male"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Megachilidae",
+  Genus = "Megachile",
+  SubGenus = "Megachile",
+  Species = "montivaga",
+  SubSpecies = "",
+  Sex = "male",
+  Caste = "",
+  Author = "Cresson, 1878",
+  Determiner = "A.S.Jakcson",
+  temp.id = c(1681
+  )
 )
 
 sp.ids[["Megachile_perihirta_female"]] <- list(
@@ -1853,6 +2018,22 @@ sp.ids[["Megachile_pugnata_female"]] <- list(
   Author = "Say, 1837",
   Determiner = "A.S.Jackson",
   temp.id = c(736
+  )
+)
+
+sp.ids[["Megachile_pugnata_male"]] <- list(
+  
+  Order = "Hymenoptera",
+  Family = "Megachilidae",
+  Genus = "Megachile",
+  SubGenus = "Sayapis",
+  Species = "pugnata",
+  SubSpecies = "",
+  Sex = "male",
+  Caste = "",
+  Author = "Say, 1837",
+  Determiner = "A.S.Jackson",
+  temp.id = c(1976
   )
 )
 
@@ -2173,7 +2354,7 @@ sp.ids[["Osmia_montana_female"]] <- list(
   Caste = "",
   Author = "Cresson, 1864",
   Determiner = "A.S.Jackson",
-  temp.id = c(259, 532
+  temp.id = c(259, 532, 1574, 1705, 1958, 1969
   )
 )
 
@@ -2323,5 +2504,6 @@ sp.ids[["Osmia_texana_female"]] <- list(
 #   temp.id = c()
 # )
 
-source('prairie/dataPrep/speciesIDs/src/cleaning.R')
+
+source('C:/Users/clair/University of Oregon Dropbox/Jacob Swanson/prairie (Selective Sync Conflict)/dataPrep/speciesIDs/src/cleaning.R')
 checkSpeciesIDs(sp.ids = sp.ids, project_abbrev = "PI-")
