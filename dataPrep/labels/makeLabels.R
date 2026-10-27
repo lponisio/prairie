@@ -1,5 +1,5 @@
 rm(list=ls())
-
+setwd("C:/")
 source("lab_paths.R")
 local.path
 
@@ -20,8 +20,9 @@ makeLabel <- function(x){
 }
 
 
+spec <- spec[spec$UniqueID >= 1443 & spec$UniqueID <= 2077, ]
 spec <- spec[order(spec$UniqueID),]
 
 labels <- apply(spec, 1, makeLabel)
 
-write.table(labels, file="../../../labels/lables_jul_30_2025.txt", sep="\n", row.names=FALSE)
+write.table(labels, file="../../../labels/lables_jul_19_2026.txt", sep="\n", row.names=FALSE)
