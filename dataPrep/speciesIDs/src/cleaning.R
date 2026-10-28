@@ -2,13 +2,30 @@ checkSpeciesIDs <- function(path = NULL,
                             sp.ids = NULL,
                             project_abbrev = NULL,
                             print_counts = TRUE,
-                            print_issues = TRUE) {
+                            print_issues = TRUE,
+                            output_dir = "prairie_saved/data/cleaning/") {
   ## ------------------------------------------------------------
   ## Species ID validator for sp.ids lists
   ##
   ## Use:
   ##   out <- checkSpeciesIDs("All_Species_ID.R", project_abbrev = "HJ-")
   ##   out <- checkSpeciesIDs(sp.ids = sp.ids, project_abbrev = "PNW-")
+  ##
+  ## Every call writes CSV reports to output_dir (created if needed).
+  ## cleaning_issues.csv: one row per issue/element, with list position,
+  ## temp.id (semicolon-separated for metadata issues), detail and recommendation.
+  ## Other reports: cleaning_issue_summary.csv, cleaning_element_index.csv,
+  ## cleaning_specimen_index.csv, cleaning_counts_by_taxon.csv,
+  ## cleaning_duplicate_ids_within_elements.csv,
+  ## cleaning_duplicate_ids_across_elements.csv,
+  ## cleaning_source_duplicate_element_names.csv.
+  ## Files are overwritten on each call, including header-only empty reports.
+  ## Set output_dir = NULL to disable CSV export.
+  ## Paths are relative to the working directory, not the script location.
+  ## Example after sourcing this script and the ID file:
+  ##   out <- checkSpeciesIDs(sp.ids = sp.ids)
+  ## To also check duplicate element declarations in the source:
+  ##   out <- checkSpeciesIDs(path = "all_IDs.R")
   ##
   ## Returns:
   ##   $counts_by_taxon
@@ -25,13 +42,28 @@ checkSpeciesIDs <- function(path = NULL,
   ## - It prints Genus Species SubSpecies Sex counts for tray checking.
   ## ------------------------------------------------------------
 
+  current_element_index <- NA_integer_
+
   add_issue <- function(severity, issue_type, element_name = NA_character_,
                         field = NA_character_, value = NA_character_,
-                        detail = NA_character_, recommendation = NA_character_) {
+                        detail = NA_character_, recommendation = NA_character_,
+                        element_index = current_element_index,
+                        temp.id = NULL) {
+    # Metadata issues concern every specimen in the current list element.
+    if (is.null(temp.id)) {
+      temp.id <- NA_character_
+      if (!is.na(element_index) && is.list(sp.ids[[element_index]])) {
+        rec_ids <- trimws(as.character(sp.ids[[element_index]]$temp.id))
+        rec_ids <- unique(rec_ids[!is.na(rec_ids) & nzchar(rec_ids)])
+        if (length(rec_ids)) temp.id <- paste(rec_ids, collapse = "; ")
+      }
+    }
     data.frame(
       severity = severity,
       issue_type = issue_type,
       element_name = element_name,
+      element_index = element_index,
+      temp.id = as.character(temp.id),
       field = field,
       value = as.character(value),
       detail = detail,
@@ -144,7 +176,7 @@ checkSpeciesIDs <- function(path = NULL,
   ## Load sp.ids
   ## ------------------------------------------------------------
   if (!is.null(path)) {
-    env <- new.env(parent = emptyenv())
+    env <- new.env(parent = baseenv())
     sys.source(path, envir = env)
     if (!exists("sp.ids", envir = env, inherits = FALSE)) {
       stop("No object named `sp.ids` was created by sourcing the file.")
@@ -188,7 +220,7 @@ checkSpeciesIDs <- function(path = NULL,
         element_name = source_dups$element_name[i],
         field = "element_name",
         value = source_dups$occurrences_in_source[i],
-        detail = "The same element name appears more than once in the source file.",
+        detail = "The same element name appears more than once in the source file. Review every declaration; overwritten records and their IDs may not remain in the loaded list.",
         recommendation = "Rename or merge duplicates before sourcing, because assignment-style duplicates may overwrite earlier records."
       )
     }
@@ -198,15 +230,16 @@ checkSpeciesIDs <- function(path = NULL,
   loaded_dup_names <- loaded_dup_names[loaded_dup_names > 1]
   if (length(loaded_dup_names) > 0) {
     for (nm in names(loaded_dup_names)) {
-      issues[[length(issues) + 1]] <- add_issue(
-        severity = "error",
-        issue_type = "duplicate_element_name_loaded",
-        element_name = nm,
-        field = "element_name",
-        value = loaded_dup_names[[nm]],
-        detail = "The loaded sp.ids list contains duplicated element names.",
-        recommendation = "Merge same-taxon duplicates or rename biologically distinct entries so list names are unique."
-      )
+      for (idx in which(!is.na(element_names) & element_names == nm)) {
+        issues[[length(issues) + 1]] <- add_issue(
+          severity = "error",
+          issue_type = "duplicate_element_name_loaded",
+          element_name = nm, element_index = idx,
+          field = "element_name", value = loaded_dup_names[[nm]],
+          detail = "The loaded sp.ids list contains duplicated element names; use element_index to locate each occurrence.",
+          recommendation = "Merge same-taxon duplicates or rename biologically distinct entries so list names are unique."
+        )
+      }
     }
   }
 
@@ -214,6 +247,7 @@ checkSpeciesIDs <- function(path = NULL,
   ## Per-element checks
   ## ------------------------------------------------------------
   for (i in seq_along(sp.ids)) {
+    current_element_index <- i
     rec <- sp.ids[[i]]
     element_name <- element_names[i]
     if (is.na(element_name) || element_name == "") {
@@ -285,6 +319,8 @@ checkSpeciesIDs <- function(path = NULL,
     if (length(ids_chr) > 0) {
       id_rows[[length(id_rows) + 1]] <- data.frame(
         element_name = element_name,
+        element_index = i,
+        id_position = which(!is.na(as.character(ids))),
         Genus = genus,
         Species = species,
         SubSpecies = subspecies,
@@ -323,11 +359,22 @@ checkSpeciesIDs <- function(path = NULL,
       )
     }
 
+    if (anyNA(ids)) {
+      issues[[length(issues) + 1]] <- add_issue(
+        "error", "missing_temp_id", element_name, "temp.id", NA_character_,
+        detail = paste0("Missing (NA) temp.id at position(s): ",
+                        paste(which(is.na(ids)), collapse = ", ")),
+        recommendation = "Remove missing IDs or enter the specimen ID.",
+        temp.id = NA_character_
+      )
+    }
+
     if (any(ids_chr == "")) {
       issues[[length(issues) + 1]] <- add_issue(
         "error", "blank_temp_id", element_name, "temp.id", "",
-        detail = "At least one temp.id is blank.",
-        recommendation = "Remove blank IDs."
+        detail = paste0("Blank temp.id at position(s): ",
+                        paste(which(!is.na(ids) & trimws(as.character(ids)) == ""), collapse = ", ")),
+        recommendation = "Remove blank IDs.", temp.id = ""
       )
     }
 
@@ -337,7 +384,8 @@ checkSpeciesIDs <- function(path = NULL,
         "error", "duplicate_id_within_element", element_name, "temp.id",
         paste(dup_ids, collapse = ", "),
         detail = "The same temp.id appears more than once within this element.",
-        recommendation = "Remove repeated IDs within the element, preserving first occurrence."
+        recommendation = "Remove repeated IDs within the element, preserving first occurrence.",
+        temp.id = paste(dup_ids, collapse = "; ")
       )
     }
 
@@ -488,6 +536,8 @@ checkSpeciesIDs <- function(path = NULL,
     }
   }
 
+  current_element_index <- NA_integer_
+
   element_index <- if (length(element_rows) > 0) {
     do.call(rbind, element_rows)
   } else {
@@ -505,7 +555,9 @@ checkSpeciesIDs <- function(path = NULL,
   ## ------------------------------------------------------------
   duplicate_ids_across <- data.frame()
   if (nrow(all_ids) > 0) {
-    id_tab <- table(all_ids$temp.id)
+    valid_ids <- all_ids[!is.na(all_ids$temp.id) & nzchar(all_ids$temp.id), ]
+    distinct_elements <- unique(valid_ids[c("temp.id", "element_index")])
+    id_tab <- table(distinct_elements$temp.id)
     repeated_ids <- names(id_tab[id_tab > 1])
 
     if (length(repeated_ids) > 0) {
@@ -517,14 +569,19 @@ checkSpeciesIDs <- function(path = NULL,
       for (id in repeated_ids) {
         rows <- all_ids[all_ids$temp.id == id, ]
         taxa <- unique(paste(rows$Genus, rows$Species, rows$SubSpecies, rows$Sex))
-        issues[[length(issues) + 1]] <- add_issue(
-          "error", "duplicate_id_across_elements",
-          element_name = paste(unique(rows$element_name), collapse = " | "),
-          field = "temp.id",
-          value = id,
-          detail = paste("ID appears in", nrow(rows), "rows and", length(taxa), "taxon labels."),
-          recommendation = "Check specimen tray/database and assign the ID to only one taxon unless this is an intentional duplicate."
-        )
+        for (idx in unique(rows$element_index)) {
+          issues[[length(issues) + 1]] <- add_issue(
+            "error", "duplicate_id_across_elements",
+            element_name = rows$element_name[match(idx, rows$element_index)],
+            element_index = idx, temp.id = id,
+            field = "temp.id", value = id,
+            detail = paste0("ID appears in elements: ",
+                            paste(unique(paste0(rows$element_name, " [", rows$element_index, "]")),
+                                  collapse = " | "),
+                            "; ", length(taxa), " taxon labels."),
+            recommendation = "Check specimen tray/database and assign the ID to only one taxon unless this is an intentional duplicate."
+          )
+        }
       }
     }
   }
@@ -550,14 +607,18 @@ checkSpeciesIDs <- function(path = NULL,
     if (length(dup_taxa) > 0) {
       for (key in dup_taxa) {
         rows <- element_index[taxon_key == key, ]
-        issues[[length(issues) + 1]] <- add_issue(
-          "warning", "same_taxon_multiple_elements",
-          element_name = paste(rows$element_name, collapse = " | "),
-          field = "taxon metadata",
-          value = rows$taxon_label[1],
-          detail = paste("Same taxon metadata appears in", nrow(rows), "elements."),
-          recommendation = "Merge IDs into one element if these are truly identical; combine determiners with commas."
-        )
+        for (j in seq_len(nrow(rows))) {
+          issues[[length(issues) + 1]] <- add_issue(
+            "warning", "same_taxon_multiple_elements",
+            element_name = rows$element_name[j],
+            element_index = rows$element_index[j],
+            field = "taxon metadata", value = rows$taxon_label[j],
+            detail = paste0("Same taxon metadata appears in elements: ",
+                            paste(paste0(rows$element_name, " [", rows$element_index, "]"),
+                                  collapse = " | ")),
+            recommendation = "Merge IDs into one element if these are truly identical; combine determiners with commas."
+          )
+        }
       }
     }
   }
@@ -611,7 +672,7 @@ checkSpeciesIDs <- function(path = NULL,
 
   duplicate_ids_within <- data.frame()
   if (nrow(all_ids) > 0) {
-    key <- paste(all_ids$element_name, all_ids$temp.id, sep = "||")
+    key <- paste(all_ids$element_index, all_ids$temp.id, sep = "||")
     tab <- table(key)
     dup_key <- names(tab[tab > 1])
     if (length(dup_key) > 0) {
@@ -630,6 +691,8 @@ checkSpeciesIDs <- function(path = NULL,
       severity = character(),
       issue_type = character(),
       element_name = character(),
+      element_index = integer(),
+      temp.id = character(),
       field = character(),
       value = character(),
       detail = character(),
@@ -649,6 +712,64 @@ checkSpeciesIDs <- function(path = NULL,
     issue_summary <- issue_summary[issue_summary$n > 0, ]
     issue_summary <- issue_summary[order(issue_summary$severity, issue_summary$issue_type), ]
     rownames(issue_summary) <- NULL
+  }
+
+  # Give empty reports useful column headers and overwrite stale results.
+  if (ncol(all_ids) == 0) {
+    all_ids <- data.frame(element_name = character(), element_index = integer(),
+                          id_position = integer(), Genus = character(),
+                          Species = character(), SubSpecies = character(),
+                          Sex = character(), temp.id = character())
+  }
+  if (ncol(duplicate_ids_within) == 0) duplicate_ids_within <- all_ids[FALSE, ]
+  if (ncol(duplicate_ids_across) == 0) duplicate_ids_across <- all_ids[FALSE, ]
+  if (ncol(source_dups) == 0) {
+    source_dups <- data.frame(element_name = character(), occurrences_in_source = integer())
+  }
+  if (ncol(element_index) == 0) {
+    element_index <- data.frame(element_name = character(), element_index = integer(),
+                               Order = character(), Family = character(), Genus = character(),
+                               SubGenus = character(), Species = character(), SubSpecies = character(),
+                               Sex = character(), sex_normalized = character(), Caste = character(),
+                               Author = character(), Determiner = character(), id_count = integer(),
+                               unique_id_count = integer(), taxon_label = character())
+  }
+  if (ncol(counts_by_taxon) == 0) {
+    counts_by_taxon <- data.frame(Genus = character(), Species = character(),
+                                 SubSpecies = character(), Sex = character(),
+                                 count = integer(), unique_count = integer())
+  }
+  if (ncol(issue_summary) == 0) {
+    issue_summary <- data.frame(severity = character(), issue_type = character(), n = integer())
+  }
+
+  csv_files <- character()
+  if (!is.null(output_dir)) {
+    if (length(output_dir) != 1L || is.na(output_dir) || !nzchar(output_dir)) {
+      stop("`output_dir` must be one nonblank directory path, or NULL.")
+    }
+    if (!dir.exists(output_dir) &&
+        !dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)) {
+      stop("Could not create CSV report directory: ", output_dir)
+    }
+    reports <- list(
+      cleaning_issues = issues_df,
+      cleaning_issue_summary = issue_summary,
+      cleaning_element_index = element_index,
+      cleaning_specimen_index = all_ids,
+      cleaning_counts_by_taxon = counts_by_taxon,
+      cleaning_duplicate_ids_within_elements = duplicate_ids_within,
+      cleaning_duplicate_ids_across_elements = duplicate_ids_across,
+      cleaning_source_duplicate_element_names = source_dups
+    )
+    csv_files <- setNames(file.path(output_dir, paste0(names(reports), ".csv")),
+                          names(reports))
+    for (report in names(reports)) {
+      write.csv(reports[[report]], csv_files[[report]], row.names = FALSE,
+                na = "", fileEncoding = "UTF-8")
+    }
+    message("CSV reports written to: ", normalizePath(output_dir, winslash = "/"),
+            "\nStart with cleaning_issues.csv for details and affected IDs.")
   }
 
   if (print_counts) {
@@ -697,6 +818,8 @@ checkSpeciesIDs <- function(path = NULL,
     element_index = element_index,
     duplicate_ids_within_elements = duplicate_ids_within,
     duplicate_ids_across_elements = duplicate_ids_across,
-    source_duplicate_element_names = source_dups
+    source_duplicate_element_names = source_dups,
+    specimen_index = all_ids,
+    csv_files = csv_files
   ))
 }

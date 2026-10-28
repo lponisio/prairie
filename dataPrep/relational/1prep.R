@@ -58,7 +58,7 @@ spec.data$PlantGenusSpecies <- fix.white.space(spec.data$PlantGenusSpecies)
 ## unique(spec.data$FieldPlantID[is.na(spec.data$PlantGenusSpecies)])
 
 ## assign species IDs *********************************************
-## source('prairie/dataPrep/speciesIDs/AssignSpecies.R')
+source('prairie/dataPrep/speciesIDs/AssignSpecies.R')
 
 write.csv(spec.data, file="prairie_saved/data/relational/original/specimens.csv",
           row.names=FALSE)
