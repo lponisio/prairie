@@ -123,7 +123,7 @@ sp.ids[["Apis_mellifera_female"]] <- list(
                 1300, 1301, 1302, 1304, 1306, 1309, 1345, 1350, 1353, 1357, 1366, 
                 1367, 1368, 1369, 1372, 1376, 1379, 1384, 1385, 1388, 1393, 1394, 
                 1396, 1397, 1402, 1404, 1405, 1406, 1412, 1415, 1421, 1423, 1424, 
-                1430, 1431, 1438, 1440, 1441, 2056
+                1430, 1431, 1438, 1440, 1441, 2059
     )
 )
 
@@ -1083,7 +1083,7 @@ sp.ids[["Halictus_rubicundus_female"]] <- list(
     Family = "Halictidae",
     Genus = "Halictus",
     SubGenus = "Nealictus",
-    Species = "confusus",
+    Species = "rubicundus",
     SubSpecies = "",
     Sex = "female",
     Caste = "",
@@ -1121,7 +1121,7 @@ sp.ids[["Halictus_farinosus_female"]] <- list(
     Caste = "",
     Author = "Smith, 1853",
     Determiner = "A.S.Jackson",
-    temp.id = c(1, 14, 78, 82, 83, 84, 104, 105, 119, 155, 187, 189, 195, 199, 210, 
+    temp.id = c(1, 78, 82, 83, 84, 104, 105, 119, 155, 187, 189, 195, 199, 210, 
                 214, 215, 279, 280, 281, 282, 283, 284, 310, 311, 327, 429, 516, 
                 536, 537, 539, 617, 701, 705, 707, 711, 715, 717, 740, 742, 774, 
                 800, 818, 829, 830, 856, 857, 860, 880, 882, 911, 922, 923, 925, 
@@ -2080,7 +2080,7 @@ sp.ids[["Melissodes_communis_male"]] <- list(
     Caste = "",
     Author = "Cresson, 1878",
     Determiner = "A.S.Jackson",
-    temp.id = c(451, 99
+    temp.id = c(451
     )
 )
 
