@@ -19,7 +19,8 @@ library(dplyr)
 library(geosphere)
 
 
-source("C:/lab_paths.R")
+## source("C:/lab_paths.R")
+source("~/lab_paths.R")
 local.path
 
 ## *****************************************************************
