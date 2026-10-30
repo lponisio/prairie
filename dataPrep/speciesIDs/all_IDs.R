@@ -2505,5 +2505,5 @@ sp.ids[["Osmia_texana_female"]] <- list(
 # )
 
 
-source('C:/Users/clair/University of Oregon Dropbox/Jacob Swanson/prairie (Selective Sync Conflict)/dataPrep/speciesIDs/src/cleaning.R')
+source('src/cleaning.R')
 checkSpeciesIDs(sp.ids = sp.ids, project_abbrev = "PI-")
