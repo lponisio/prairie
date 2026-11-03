@@ -15,6 +15,8 @@ if (!dir.exists(cleaning.dir) &&
   stop("Could not create ID diagnostic directory: ", cleaning.dir)
 }
 
+
+print("HERE")
 source(file.path(save.dir, "src/AddData.R"))
 # all_IDs.R loads cleaning.R and calls checkSpeciesIDs() after defining sp.ids.
 source(file.path(save.dir, "all_IDs.R"))

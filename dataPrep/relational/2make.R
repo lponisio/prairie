@@ -123,6 +123,11 @@ print("specimens without weather data")
 print(specimens$UniqueID[is.na(specimens$ConditionsFK)])
 print(specimens$cond.code[is.na(specimens$ConditionsFK)])
 
+print("veg without weather data")
+fix.veg <- unique(veg[is.na(veg$ConditionsFK), c("Site", "Date")])
+
+write.csv(fix.veg, file="prairie_saved/data/cleaning/veg_no_cond.csv")
+
 fix.cond <- specimens[is.na(specimens$ConditionsFK),]
 write.csv(fix.cond, file="prairie_saved/data/cleaning/spec_no_cond.csv")
 

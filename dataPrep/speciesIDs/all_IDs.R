@@ -1089,8 +1089,7 @@ sp.ids[["Halictus_rubicundus_female"]] <- list(
     Caste = "",
     Author = "Smith, 1853",
     Determiner = "A.S.Jackson",
-    temp.id = c(247, 319, 354, 584, 1258, 1492, 1647, 1825, 1828, 1829, 1831, 
-                1492, 1647, 1825, 1828, 1829, 1831, 1844
+    temp.id = c(247, 319, 354, 584, 1258, 1492, 1647, 1825, 1828, 1829, 1831
     )
 )
 
@@ -2505,5 +2504,5 @@ sp.ids[["Osmia_texana_female"]] <- list(
 # )
 
 
-source('src/cleaning.R')
+source(file.path(save.dir, 'src/cleaning.R'))
 checkSpeciesIDs(sp.ids = sp.ids, project_abbrev = "PI-")
