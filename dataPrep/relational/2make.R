@@ -86,9 +86,13 @@ dbListTables(con)
 
 ## Temporarily identify unique combinations:
 keep <- c("GeographyFK", "Date")
-conditions$cond.code <- apply(conditions[keep], 1, paste, collapse=";")
-specimens$cond.code <- apply(specimens[keep], 1, paste, collapse=";")
-veg$cond.code <- apply(veg[keep], 1, paste, collapse=";")
+# conditions$cond.code <- apply(conditions[keep], 1, paste, collapse=";")
+# specimens$cond.code <- apply(specimens[keep], 1, paste, collapse=";")
+# veg$cond.code <- apply(veg[keep], 1, paste, collapse=";")
+
+conditions$cond.code <- paste(conditions$GeographyFK, conditions$Date, sep=";")
+specimens$cond.code  <- paste(specimens$GeographyFK,  specimens$Date,  sep=";")
+veg$cond.code        <- paste(veg$GeographyFK,        veg$Date,        sep=";")
 
 ## make table
 keep <- c("Date",
@@ -124,7 +128,10 @@ print(specimens$UniqueID[is.na(specimens$ConditionsFK)])
 print(specimens$cond.code[is.na(specimens$ConditionsFK)])
 
 print("veg without weather data")
-fix.veg <- unique(veg[is.na(veg$ConditionsFK), c("Site", "Date")])
+
+fix.veg <- unique(veg[is.na(veg$ConditionsFK),
+                      c("Site", "BurnUnburned", "Block", "Transect",
+                        "Date", "GeographyFK", "cond.code")])
 
 write.csv(fix.veg, file="prairie_saved/data/cleaning/veg_no_cond.csv")
 
