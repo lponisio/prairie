@@ -19,8 +19,8 @@ library(dplyr)
 library(geosphere)
 
 
-## source("C:/lab_paths.R")
-source("~/lab_paths.R")
+source("C:/lab_paths.R")
+#source("~/lab_paths.R")
 local.path
 
 ## *****************************************************************
@@ -56,7 +56,6 @@ spec <-
            stringsAsFactors=FALSE)
 
 ## trait data
-
 source("src/misc.R")
 source("src/prepNets.R")
 source("src/specialization.R")
@@ -64,7 +63,6 @@ source("src/specialization.R")
 spec$Date <- as.Date(spec$Date, format='%Y-%m-%d')
 spec$Year <- format(spec$Date, "%Y")
 spec$DoyStart<- as.numeric(strftime(spec$Date, format='%j'))
-spec <- subset(spec, SampleRound != "SV")
 
 ## create a master sheet of conditions from the original data
 surveys.master <-
@@ -72,11 +70,10 @@ surveys.master <-
 
 
 condition.cols <-  c("Site", "SampleRound",
-                                     "Plot", "Date", "StartTime",
-                                     "EndTime",
-                                     "TempStart", "TempEnd",
-                                     "WindStart",
-                                     "WindEnd")
+                    "Transect", "BurnUnburned", "Block",
+                    "Date", "TimeStart",
+                    "TimeEnd", "TempStart", "TempEnd",
+                    "WindStart", "WindEnd")
 
 surveys.master <- surveys.master[, condition.cols]
 
@@ -88,28 +85,27 @@ surveys.master$DoyStart<-
                       format='%j'))
 
 surveys.master$Year <- format(surveys.master$Date, '%Y')
-surveys.master <- subset(surveys.master, SampleRound != "SV")
 
-## *****************************************************************
-## Meadow proximity
-## *****************************************************************
-
-sites <- spec %>% 
-  distinct(Site, Lat, Long, Area) 
-
-# Compute the distance matrix (in meters)
-dist_matrix <- distm(sites[, c("Long", "Lat")], fun = distHaversine)
-
-# Convert meters to kilometers
-dist_matrix_km <- dist_matrix / 1000
-
-# Calculate mean distance for each point, excluding self-distance (diagonal)
-mean_distances <- apply(dist_matrix_km, 1, function(x) mean(x[-which(x == 0)]))
-
-# Add mean distances to the data frame
-sites$Proximity <- mean_distances
-
-surveys.master <- left_join(surveys.master, sites)
+# ## *****************************************************************
+# ## Meadow proximity
+# ## *****************************************************************
+# 
+# sites <- spec %>% 
+#   distinct(Site, Lat, Long, Area) 
+# 
+# # Compute the distance matrix (in meters)
+# dist_matrix <- distm(sites[, c("Long", "Lat")], fun = distHaversine)
+# 
+# # Convert meters to kilometers
+# dist_matrix_km <- dist_matrix / 1000
+# 
+# # Calculate mean distance for each point, excluding self-distance (diagonal)
+# mean_distances <- apply(dist_matrix_km, 1, function(x) mean(x[-which(x == 0)]))
+# 
+# # Add mean distances to the data frame
+# sites$Proximity <- mean_distances
+# 
+# surveys.master <- left_join(surveys.master, sites)
 
 ## *****************************************************************
 ## mean across Site, Sampling Round, Year
@@ -117,7 +113,7 @@ surveys.master <- left_join(surveys.master, sites)
 
 surveys.master.round.year <- surveys.master  %>%
   group_by(Year, Site, SampleRound,
-           Date, DoyStart, Area, Proximity
+           Date, DoyStart,
            ) %>%
   summarise(TempStart = mean(TempStart, na.rm = TRUE),
             TempEnd = mean(TempEnd, na.rm = TRUE),
@@ -149,75 +145,75 @@ spec$GenusSpecies[spec$GenusSpecies == "NA NA"] <- ""
 ## *****************************************************************
 ## specimen-level parasite calculations
 ## *****************************************************************
-source('parasite_positives.R')
-
-
-crithidias <- c("CrithidiaExpoeki",
-                "CrithidiaBombi", "CrithidiaSpp")
-nosemas <- c("NosemaBombi", "NosemaCeranae")
-parasites <- c( "AscosphaeraSpp",
-               "ApicystisSpp", crithidias, nosemas)
-
-blank.par <- data.frame(rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)),
-                        rep(NA, nrow(spec)))
-
-colnames(blank.par) <- c("Apidae", parasites)
-
-spec <- cbind(spec, blank.par)
-
-spec$Apidae[spec$UniqueID %in% Apidae] <- 1
-spec[which(spec$Apidae == 1) , parasites] <- 0
-
-spec$ApicystisSpp[spec$UniqueID %in% ApicystisSpp] <- 1
-spec$AscosphaeraSpp[spec$UniqueID %in% AscosphaeraSpp] <- 1
-spec$CrithidiaBombi[spec$UniqueID %in% CrithidiaBombi] <- 1
-spec$CrithidiaExpoeki[spec$UniqueID %in% CrithidiaExpoeki] <- 1
-spec$CrithidiaSpp[spec$UniqueID %in% CrithidiaSpp] <- 1
-spec$NosemaBombi[spec$UniqueID %in% NosemaBombi] <- 1
-spec$NosemaCeranae[spec$UniqueID %in% NosemaCeranae] <- 1
-
-all.parasites <- list(ApicystisSpp, AscosphaeraSpp, CrithidiaBombi,
-                      CrithidiaExpoeki, CrithidiaSpp, NosemaBombi,
-                      NosemaCeranae)
-
-apply(spec[, parasites],2, sum, na.rm=TRUE)
-
-spec[, parasites][is.na(spec[, parasites])] <- 0
-spec[, parasites][spec[, parasites] == ""] <- 0
-spec[, parasites] <- apply(spec[, parasites], 2,  as.numeric)
-
-spec[spec$Apidae != 1 | is.na(spec$Apidae), parasites] <- NA
-
-spec$ParasiteRichness <- rowSums(spec[, parasites],
-                                 na.rm=TRUE)
-spec$CrithidiaRichness <- rowSums(spec[, crithidias],
-                                  na.rm=TRUE)
-spec$NosemaRichness <- rowSums(spec[, nosemas],
-                                 na.rm=TRUE)
-spec$PossibleParasite <- apply(spec[, parasites], 1,
-                               function(x) sum(!is.na(x)))
-spec$ParasitePresence <- (spec$ParasiteRichness >= 1)*1
-spec$CrithidiaPresence <- (spec$CrithidiaRichness >= 1)*1
-spec$NosemaPresence <- (spec$NosemaRichness >= 1)*1
-
-spec[spec$Apidae != 1  | is.na(spec$Apidae), "ParasiteRichness"] <- NA
-spec[spec$Apidae != 1  | is.na(spec$Apidae), "ParasitePresence"] <- NA
-spec[spec$Apidae != 1  | is.na(spec$Apidae), "CrithidiaRichness"] <-
-    NA
-spec[spec$Apidae != 1  | is.na(spec$Apidae), "NosemaRichness"] <-
-  NA
-spec[spec$Apidae != 1  | is.na(spec$Apidae), "CrithidiaPresence"] <- NA
-spec[spec$Apidae != 1  | is.na(spec$Apidae), "NosemaPresence"] <- NA
-
-check.spec <- spec[!is.na(spec$Apidae),]
-check.spec <- check.spec[check.spec$GenusSpecies == "",]
-check.spec
+# source('parasite_positives.R')
+# 
+# 
+# crithidias <- c("CrithidiaExpoeki",
+#                 "CrithidiaBombi", "CrithidiaSpp")
+# nosemas <- c("NosemaBombi", "NosemaCeranae")
+# parasites <- c( "AscosphaeraSpp",
+#                "ApicystisSpp", crithidias, nosemas)
+# 
+# blank.par <- data.frame(rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)),
+#                         rep(NA, nrow(spec)))
+# 
+# colnames(blank.par) <- c("Apidae", parasites)
+# 
+# spec <- cbind(spec, blank.par)
+# 
+# spec$Apidae[spec$UniqueID %in% Apidae] <- 1
+# spec[which(spec$Apidae == 1) , parasites] <- 0
+# 
+# spec$ApicystisSpp[spec$UniqueID %in% ApicystisSpp] <- 1
+# spec$AscosphaeraSpp[spec$UniqueID %in% AscosphaeraSpp] <- 1
+# spec$CrithidiaBombi[spec$UniqueID %in% CrithidiaBombi] <- 1
+# spec$CrithidiaExpoeki[spec$UniqueID %in% CrithidiaExpoeki] <- 1
+# spec$CrithidiaSpp[spec$UniqueID %in% CrithidiaSpp] <- 1
+# spec$NosemaBombi[spec$UniqueID %in% NosemaBombi] <- 1
+# spec$NosemaCeranae[spec$UniqueID %in% NosemaCeranae] <- 1
+# 
+# all.parasites <- list(ApicystisSpp, AscosphaeraSpp, CrithidiaBombi,
+#                       CrithidiaExpoeki, CrithidiaSpp, NosemaBombi,
+#                       NosemaCeranae)
+# 
+# apply(spec[, parasites],2, sum, na.rm=TRUE)
+# 
+# spec[, parasites][is.na(spec[, parasites])] <- 0
+# spec[, parasites][spec[, parasites] == ""] <- 0
+# spec[, parasites] <- apply(spec[, parasites], 2,  as.numeric)
+# 
+# spec[spec$Apidae != 1 | is.na(spec$Apidae), parasites] <- NA
+# 
+# spec$ParasiteRichness <- rowSums(spec[, parasites],
+#                                  na.rm=TRUE)
+# spec$CrithidiaRichness <- rowSums(spec[, crithidias],
+#                                   na.rm=TRUE)
+# spec$NosemaRichness <- rowSums(spec[, nosemas],
+#                                  na.rm=TRUE)
+# spec$PossibleParasite <- apply(spec[, parasites], 1,
+#                                function(x) sum(!is.na(x)))
+# spec$ParasitePresence <- (spec$ParasiteRichness >= 1)*1
+# spec$CrithidiaPresence <- (spec$CrithidiaRichness >= 1)*1
+# spec$NosemaPresence <- (spec$NosemaRichness >= 1)*1
+# 
+# spec[spec$Apidae != 1  | is.na(spec$Apidae), "ParasiteRichness"] <- NA
+# spec[spec$Apidae != 1  | is.na(spec$Apidae), "ParasitePresence"] <- NA
+# spec[spec$Apidae != 1  | is.na(spec$Apidae), "CrithidiaRichness"] <-
+#     NA
+# spec[spec$Apidae != 1  | is.na(spec$Apidae), "NosemaRichness"] <-
+#   NA
+# spec[spec$Apidae != 1  | is.na(spec$Apidae), "CrithidiaPresence"] <- NA
+# spec[spec$Apidae != 1  | is.na(spec$Apidae), "NosemaPresence"] <- NA
+# 
+# check.spec <- spec[!is.na(spec$Apidae),]
+# check.spec <- check.spec[check.spec$GenusSpecies == "",]
+# check.spec
 
 ## ***********************************************************************
 ## site/species level insect data
