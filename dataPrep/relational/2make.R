@@ -271,7 +271,7 @@ write.csv(dbReadTable(con, 'tblPlant'),
 ## 5. Specimens:
 ## *******************************************************
 
-keep <- c('UniqueID', 'Observer', 'InsectFK',
+keep <- c('Site', 'SampleRound', 'UniqueID', 'Observer', 'InsectFK',
           'PlantFK', 'ConditionsFK', 'GeographyFK')
 
 specimens <- specimens[keep]
