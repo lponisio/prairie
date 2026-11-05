@@ -95,7 +95,7 @@ surveys.master.round.year <- surveys.master  %>%
             TempEnd = mean(TempEnd, na.rm = TRUE),
             WindStart = mean(WindStart, na.rm = TRUE),
             WindEnd = mean(WindEnd, na.rm = TRUE), 
-            .by = c(Year, Site, SampleRound, Date, DoyStart))
+            .by = c(Year, Site, SampleRound))
 
 ## *****************************************************************
 ### prep spec data
@@ -124,9 +124,9 @@ write.csv(spec, file="../data/spec_all.csv", row.names=FALSE)
 
 bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
                   "Megachilidae")
-site.sp <- spec %>%
+site.sp.yr.sr <- spec %>%
   summarise(Abundance = length(GenusSpecies),
-            .by = c(Site, GenusSpecies))
+            .by = c(Site, Year, SampleRound, GenusSpecies))
 
 ## sum over site
 site.sum <- spec[!is.na(spec$GenusSpecies),] %>%
@@ -156,7 +156,7 @@ site.sum <- spec[!is.na(spec$GenusSpecies),] %>%
             BeeDiversity=vegan:::diversity(table(
               GenusSpecies[Family %in% bee.families]),
               index="shannon"),
-            .by = c(Site))
+            .by = c(Site, Year, SampleRound))
 
 
 col.mets <- c("PollAbundance",
@@ -187,9 +187,7 @@ site.sp.yr <- spec[!is.na(spec$GenusSpecies),] %>%
 
 ## write species-level summary data
 write.csv(site.sp.yr, file='../data/sp_year.csv', row.names=FALSE)
-
-## write the site, year, sampling round summary data after merging
-## with plant data
+write.csv(site.sp.yr.sr, file='../data/sp_year_sr.csv', row.names=FALSE)
 
 
 ## ***********************************************************************
@@ -197,7 +195,7 @@ write.csv(site.sp.yr, file='../data/sp_year.csv', row.names=FALSE)
 ## have in a standardized format
 ## ***********************************************************************
 
-bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
+# bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
 #                   "Megachilidae")
 # 
 # 
