@@ -112,13 +112,11 @@ surveys.master$Year <- format(surveys.master$Date, '%Y')
 ## *****************************************************************
 
 surveys.master.round.year <- surveys.master  %>%
-  group_by(Year, Site, SampleRound,
-           Date, DoyStart,
-           ) %>%
   summarise(TempStart = mean(TempStart, na.rm = TRUE),
             TempEnd = mean(TempEnd, na.rm = TRUE),
             WindStart = mean(WindStart, na.rm = TRUE),
-            WindEnd = mean(WindEnd, na.rm = TRUE))
+            WindEnd = mean(WindEnd, na.rm = TRUE), 
+            .by = c(Year, Site, SampleRound, Date, DoyStart))
 
 ## *****************************************************************
 ### prep spec data
@@ -222,9 +220,8 @@ spec$GenusSpecies[spec$GenusSpecies == "NA NA"] <- ""
 bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
                   "Megachilidae")
 site.sp <- spec %>%
-  group_by(Site, Date, GenusSpecies) %>%
-  summarise(Abundance = length(GenusSpecies),
-            SpParasitismRate=mean(ParasitePresence, na.rm=TRUE))
+  summarise(Abundance = length(GenusSpecies), na.rm=TRUE,
+            .by = c(Site, Date, GenusSpecies))
 
 
 ## sum over site
