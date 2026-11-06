@@ -36,8 +36,6 @@ source('prairie/dataPrep/relational/2make.R')
 setwd(local.path)
 source('prairie/dataPrep/relational/3join.R')
 
-## stop here!!!!!
-
 ## *****************************************************************
 ## prep specimen data
 ## *****************************************************************
@@ -124,11 +122,17 @@ write.csv(spec, file="../data/spec_all.csv", row.names=FALSE)
 
 bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
                   "Megachilidae")
+
+## Site, year level
+site.sp.yr <- spec[!is.na(spec$GenusSpecies),] %>%
+  summarise(Abundance = length(GenusSpecies),
+            .by = c(Site, Year, GenusSpecies))
+
+## Site, year, sampleround level
 site.sp.yr.sr <- spec %>%
   summarise(Abundance = length(GenusSpecies),
             .by = c(Site, Year, SampleRound, GenusSpecies))
 
-## sum over site
 site.sum <- spec[!is.na(spec$GenusSpecies),] %>%
   summarise(PollAbundance = length(GenusSpecies),
             HBAbundance = sum(GenusSpecies == "Apis mellifera"),
@@ -181,135 +185,19 @@ site.sum[, col.mets][is.na(site.sum[, col.mets])] <- 0
 
 print(paste("number of surveys after", nrow(site.sum)))
 
-site.sp.yr <- spec[!is.na(spec$GenusSpecies),] %>%
-  summarise(Abundance = length(GenusSpecies),
-            .by = c(Site, Year, GenusSpecies))
-
 ## write species-level summary data
 write.csv(site.sp.yr, file='../data/sp_year.csv', row.names=FALSE)
 write.csv(site.sp.yr.sr, file='../data/sp_year_sr.csv', row.names=FALSE)
 
-
-## ***********************************************************************
-## For multi-study parasite summaries, a bit redundant but nice to
-## have in a standardized format
-## ***********************************************************************
-
-# bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
-#                   "Megachilidae")
-# 
-# 
-# par.site.sp <- spec %>%
-#     summarise(SpAbundance = length(GenusSpecies),
-#               .by = c(Site, Year, SampleRound, GenusSpecies))
-# 
-# par.site.gen <- spec %>%
-#     summarise(GenusAbundance = length(GenusSpecies),
-#               .by = c(Site, Year, SampleRound, Genus))
-# 
-# 
-# par.site.sum <- spec %>%
-#     group_by(Site, Year, SampleRound) %>%
-#     summarise(SiteBeeAbundance = length(GenusSpecies[Family %in%
-#                                                      bee.families]),
-# 
-#               SiteBeeRichness= length(unique(GenusSpecies[Family %in%
-#                                                           bee.families])),
-# 
-#               SiteBeeDiversity=vegan:::diversity(table(
-#                                            GenusSpecies[Family %in% bee.families]),
-#                                            index="shannon"),
-# 
-#               SiteParasitism = sum(ParasitePresence, na.rm=TRUE),
-#               SiteCrithidiaPresence= sum(CrithidiaPresence, na.rm=TRUE),
-#               SiteApicystisSpp = sum(ApicystisSpp, na.rm=TRUE),
-#               SiteNosemaBombi= sum(NosemaBombi, na.rm=TRUE),
-#               SiteNosemaCeranae = sum(NosemaCeranae, na.rm=TRUE),
-#               SiteAscosphaeraSpp= sum(AscosphaeraSpp, na.rm=TRUE),
-#               SiteCrithidiaExpoeki = sum(CrithidiaExpoeki, na.rm=TRUE),
-#               SiteCrithidiaBombi = sum(CrithidiaBombi, na.rm=TRUE),
-#               SiteCrithidiaSpp = sum(CrithidiaSpp, na.rm=TRUE),
-#               SiteScreened = sum(!is.na(Apidae))
-#               )
-# 
-# all.sums <- left_join(par.site.sp, par.site.gen)
-# 
-# all.sums <- left_join(all.sums, par.site.sum)
-# all.sums$Project <- "HJA"
-# 
-# save(all.sums, file="../data/HJA_parasite_sums.Rdata")
-# 
-# ## Summary but without Sampling Round
-# 
-# par.year.sp <- spec %>%
-#   group_by(Site, Year, GenusSpecies, Genus) %>%
-#   summarise(SpAbundance = length(GenusSpecies),
-#             SpParasitism = sum(ParasitePresence, na.rm=TRUE),
-#             SpCrithidiaPresence= sum(CrithidiaPresence, na.rm=TRUE),
-#             SpApicystisSpp = sum(ApicystisSpp, na.rm=TRUE),
-#             SpNosemaBombi= sum(NosemaBombi, na.rm=TRUE),
-#             SpNosemaCeranae = sum(NosemaCeranae, na.rm=TRUE),
-#             SpAscosphaeraSpp= sum(AscosphaeraSpp, na.rm=TRUE),
-#             SpCrithidiaExpoeki = sum(CrithidiaExpoeki, na.rm=TRUE),
-#             SpCrithidiaBombi = sum(CrithidiaBombi, na.rm=TRUE),
-#             SpCrithidiaSpp = sum(CrithidiaSpp, na.rm=TRUE),
-#             SpScreened = sum(!is.na(Apidae))
-#   )
-# 
-# par.year.gen <- spec %>%
-#   group_by(Site, Year, Genus) %>%
-#   summarise(GenusAbundance = length(GenusSpecies),
-#             GenusParasitism = sum(ParasitePresence, na.rm=TRUE),
-#             GenusCrithidiaPresence= sum(CrithidiaPresence, na.rm=TRUE),
-#             GenusApicystisSpp = sum(ApicystisSpp, na.rm=TRUE),
-#             GenusNosemaBombi= sum(NosemaBombi, na.rm=TRUE),
-#             GenusNosemaCeranae = sum(NosemaCeranae, na.rm=TRUE),
-#             GenusAscosphaeraSpp= sum(AscosphaeraSpp, na.rm=TRUE),
-#             GenusCrithidiaExpoeki = sum(CrithidiaExpoeki, na.rm=TRUE),
-#             GenusCrithidiaBombi = sum(CrithidiaBombi, na.rm=TRUE),
-#             GenusCrithidiaSpp = sum(CrithidiaSpp, na.rm=TRUE),
-#             GenusScreened = sum(!is.na(Apidae))
-#   )
-# 
-# par.year.sum <- spec %>%
-#   group_by(Site, Year) %>%
-#   summarise(SiteBeeAbundance = length(GenusSpecies[Family %in%
-#                                                      bee.families]),
-#             
-#             SiteBeeRichness= length(unique(GenusSpecies[Family %in%
-#                                                           bee.families])),
-#             
-#             SiteBeeDiversity=vegan:::diversity(table(
-#               GenusSpecies[Family %in% bee.families]),
-#               index="shannon"),
-#             
-#             SiteParasitism = sum(ParasitePresence, na.rm=TRUE),
-#             SiteCrithidiaPresence= sum(CrithidiaPresence, na.rm=TRUE),
-#             SiteApicystisSpp = sum(ApicystisSpp, na.rm=TRUE),
-#             SiteNosemaBombi= sum(NosemaBombi, na.rm=TRUE),
-#             SiteNosemaCeranae = sum(NosemaCeranae, na.rm=TRUE),
-#             SiteAscosphaeraSpp= sum(AscosphaeraSpp, na.rm=TRUE),
-#             SiteCrithidiaExpoeki = sum(CrithidiaExpoeki, na.rm=TRUE),
-#             SiteCrithidiaBombi = sum(CrithidiaBombi, na.rm=TRUE),
-#             SiteCrithidiaSpp = sum(CrithidiaSpp, na.rm=TRUE),
-#             SiteScreened = sum(!is.na(Apidae))
-#   )
-# 
-# all.sums.siteYR <- left_join(par.year.sp, par.year.gen)
-# 
-# all.sums.siteYR <- left_join(all.sums.siteYR, par.year.sum)
-# 
-# save(all.sums.siteYR, file="../data/parasite_sums.Rdata")
 ## *******************************************************************
 ## create a giant plant-pollinator network to calculate specialization
 ## etc. across all sites
 ## *******************************************************************
 
-## currently aggregates all of the localities, perhaps break up by
-
+## Calculate network properties
 nets.all <- table(spec$PlantGenusSpecies, spec$GenusSpecies)
-
 all.traits <- specieslevel(nets.all)
+
 ## calculate rarified plant.pol degree
 rare.plants.degree <- apply(nets.all, 1, chao1)
 rare.pols.degree <- apply(nets.all, 2, chao1)
@@ -320,6 +208,7 @@ traits <- data.frame(GenusSpecies= unlist(sapply(all.traits,
 
 traits$r.degree <-  rare.pols.degree[match(traits$GenusSpecies,
                                            names(rare.pols.degree))]
+
 traits$r.degree[is.na(traits$r.degree)] <-
   rare.plants.degree[match(traits$GenusSpecies[is.na(traits$r.degree)],
                            names(rare.plants.degree))]
@@ -329,49 +218,7 @@ rownames(traits) <- NULL
 write.csv(traits, file='../data/network_traits.csv', row.names=FALSE)
 
 ## *******************************************************************
-## create a giant pathogen-pollinator network to calculate
-## specialization etc. across all sites
-# ## *******************************************************************
-# agg.spec.sub <- spec[spec$Apidae == 1,]
-# 
-# agg.spec.para <- aggregate(agg.spec.sub[, parasites],
-#                            list(GenusSpecies=agg.spec.sub$GenusSpecies),
-#                            sum, na.rm=TRUE)
-# 
-# para.gensp.counts <- table(agg.spec.sub$GenusSpecies)
-# 
-# ## proportion of individuals screened
-# agg.spec.para[, parasites] <- agg.spec.para[, parasites]/
-#   para.gensp.counts[agg.spec.para$GenusSpecies]
-# 
-# nets.para <- agg.spec.para
-# rownames(nets.para) <- nets.para$GenusSpecies
-# nets.para$GenusSpecies <- NULL
-# 
-# all.traits.para <- specieslevel(nets.para)
-# ## calculate rarified plant.pol degree
-# 
-# para.traits <- data.frame(GenusSpecies= unlist(sapply(all.traits.para,
-#                                                       rownames)),
-#                           do.call(rbind, all.traits.para))
-# 
-# rare.pols.para.degree <- apply(nets.para, 1, chao1)
-# rare.para.degree <- apply(nets.para, 2, chao1)
-# 
-# para.traits$r.degree <-  rare.pols.para.degree[match(para.traits$GenusSpecies,
-#                                                      names(rare.pols.para.degree))]
-# 
-# para.traits$r.degree[is.na(para.traits$r.degree)] <-
-#   rare.para.degree[match(para.traits$GenusSpecies[is.na(para.traits$r.degree)],
-#                          names(rare.para.degree))]
-# 
-# rownames(para.traits) <- NULL
-# 
-# write.csv(traits, file='../data/parasite_network_traits.csv', row.names=FALSE)
-
-## *******************************************************************
-##  create site, sample round, year level networks for plant-pollinators,
-##  pollinator-parasites
+##  create site, sample round, year level networks for plant-pollinators
 ## *******************************************************************
 
 dir.create("../data/networks", showWarnings = FALSE)
@@ -393,37 +240,12 @@ nets.yr.bees <- makeNets(spec[spec$Family %in% bee.families,],
 
 
 dim(spec)
-spec <- merge(spec, nets.yr[nets.yr$speciesType ==
+spec <- merge(spec, nets.sr.bees[nets.sr.bees$speciesType ==
                                       "higher.level",],
                   all.x=TRUE)
 spec$SpSiteYear <- NULL
 spec$speciesType <- NULL
 dim(spec)
-
-spec.sub <- agg.spec.sub %>%
-  select(UniqueID, GenusSpecies, Site, Year, SampleRound,
-         "AscosphaeraSpp",
-         "ApicystisSpp", "CrithidiaExpoeki", "CrithidiaBombi",
-         "NosemaBombi", "NosemaCeranae")
-
-prep.para <- spec.sub %>%
-  pivot_longer(cols=c("AscosphaeraSpp",
-                      "ApicystisSpp", "CrithidiaExpoeki",
-                      "CrithidiaBombi",
-                      "NosemaBombi", "NosemaCeranae"),
-               names_to = "Parasite", values_to = "count")
-prep.para <- as.data.frame(prep.para)
-
-par.net.sr <- makeNets(prep.para, net.type="YearSR", species=c("Pollinator",
-                                                             "Parasite"),
-                       lower.level="GenusSpecies",
-                       higher.level="Parasite")
-
-par.net.yr <- makeNets(prep.para, net.type="Year", species=c("Pollinator",
-                                                           "Parasite"),
-                       lower.level="GenusSpecies",
-                       higher.level="Parasite",
-                       mean.by.year=TRUE)
 
 ## *******************************************************************
 ##  Data checks
@@ -438,34 +260,28 @@ print(paste("Specimens", nrow(spec)))
 ##  merge specimen data with site summaries
 ## *******************************************************************
 
-print(paste("number of specimens before parasite summary stats merge",
-            nrow(spec)))
-spec  <- merge(spec, net.par.sum, all.x=TRUE)
-print(paste("number of specimens after parasite summary stats merge",
-            nrow(spec)))
-
 ## preserves plots without any specimens caught!!
-spec$SiteSampleRoundDate <- paste(spec$Site, spec$SampleRound,
-                                 spec$Date)
-sry.spec <- length(unique(spec$SiteSampleRoundDate))
+spec$SiteSRYear <- paste(spec$Site, spec$SampleRound,
+                                 spec$Year)
+sry.spec <- length(unique(spec$SiteSRYear))
 
-site.sum$SiteSampleRoundDate <- paste(site.sum$Site,
+site.sum$SiteSRYear <- paste(site.sum$Site,
                                       site.sum$SampleRound,
-                                 site.sum$Date)
-syr.sums <- length(unique(site.sum$SiteSampleRoundDate))
+                                 site.sum$Year)
+syr.sums <- length(unique(site.sum$SiteSRYear))
 
 syr.sums-sry.spec
 
 overlap.cols <- colnames(spec)[colnames(spec) %in% colnames(site.sum)]
 
-overlap.cols <- overlap.cols[overlap.cols != "SiteSampleRoundDate"]
+overlap.cols <- overlap.cols[overlap.cols != "SiteSRYear"]
 
 ## this will mean weather is averaged across plots
 spec[, overlap.cols] <- NULL
 
 x <- dim(spec)
 x
-spec <- merge(spec, site.sum, all = TRUE, by="SiteSampleRoundDate")
+spec <- merge(spec, site.sum, all = TRUE, by="SiteSRYear")
 z <- dim(spec)
 z
 
@@ -475,8 +291,8 @@ print("sites with no specimens")
 z[1]-x[1]
 print("specimens with no ID, should be the same as above")
 sum(spec$GenusSpecies == "")
-print(length(unique(site.sum$SiteSampleRoundDate)))
-print(length(unique(spec$SiteSampleRoundDate)))
+print(length(unique(site.sum$SiteSRYear)))
+print(length(unique(spec$SiteSRYear)))
 
 
 write.csv(spec, file='../data/spec_net.csv',
