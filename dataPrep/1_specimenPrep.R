@@ -117,11 +117,18 @@ save(spec, file="../data/spec_all.Rdata")
 write.csv(spec, file="../data/spec_all.csv", row.names=FALSE)
 
 ## ***********************************************************************
-## site/species/sampleround level insect data
+## site/species/sample round level bee data
 ## ***********************************************************************
 
 bee.families <- c("Andrenidae", "Apidae", "Colletidae", "Halictidae",
                   "Megachilidae")
+print("Dim with all insect data")
+dim(spec)
+
+spec <- spec %>% 
+  filter(Family %in% bee.families)
+print("Dim with only beet data")
+dim(spec)
 
 ## Site, year level
 site.sp.yr <- spec[!is.na(spec$GenusSpecies),] %>%
@@ -378,7 +385,7 @@ veg.site..yr.sr.sum$FlowerRareRichness[is.na(veg.site..yr.sr.sum$FlowerRareRichn
 ## merge to specimen data 
 dim(spec)
 spec <- merge(spec, 
-                  veg.site.sum,
+              veg.site..yr.sr.sum,
                   all.x=TRUE)
 dim(spec)
 
