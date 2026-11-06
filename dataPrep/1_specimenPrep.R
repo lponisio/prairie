@@ -308,14 +308,6 @@ save(spec, file='../data/spec_net.Rdata')
 veg <-
   read.csv("../../prairie_saved/data/relational/traditional/veg-complete.csv")
 
-## didn't count the exact number of flowers in 2022, use
-## midpoints of bins
-veg$NumBlooms <- veg$NumBlooms
-veg$NumBlooms[veg$NumBlooms == "<10"] <- 5
-veg$NumBlooms[veg$NumBlooms == "10-100"] <- 50
-veg$NumBlooms[veg$NumBlooms == "100-1000"] <- 100
-
-veg$NumBlooms <- as.numeric(veg$NumBlooms)
 
 veg$PlantGenusSpecies <- fix.white.space(paste(veg$PlantGenus,
                                                veg$PlantSpecies))
@@ -336,57 +328,50 @@ write.csv(veg[veg$PlantGenusSpecies == "",],
 veg$Date <- as.Date(veg$Date,  "%Y-%m-%d")
 veg$Year <- format(veg$Date,  "%Y")
 
-veg.blooming <- veg[veg$NumBlooms != "" &
-                      veg$NumBlooms != "0",]
-
 
 veg.sp.site <- veg[!is.na(veg$PlantGenusSpecies),] %>%
-  group_by(Site, Year, SampleRound, PlantGenusSpecies) %>%
-  summarise(SpAbund = sum(NumBlooms))
+  summarise(SpAbund = length(PlantGenusSpecies),
+            .by = c(Site, Year, SampleRound, PlantGenusSpecies))
 
-veg.site.sum <- veg.sp.site  %>%
-  group_by(Site, SampleRound, Year) %>%
+veg.site..yr.sr.sum <- veg.sp.site  %>%
   summarise(VegAbundance =  sum(SpAbund),
             VegRichness= length(unique(PlantGenusSpecies)),
             VegDiversity=vegan:::diversity(SpAbund,
-                                           index="shannon"))
+                                           index="shannon"),
+            .by = c(Site, SampleRound, Year))
 
 ## merge w master surveys 
 col.mets <- c("VegAbundance",
               "VegRichness",
               "VegDiversity")
 
-veg.site.sum <- merge(surveys.master.round.year,
-                      veg.site.sum,
+veg.site..yr.sr.sum <- merge(surveys.master.round.year,
+                             veg.site..yr.sr.sum,
                       all.x=TRUE)
 
-veg.site.sum[, col.mets][is.na(veg.site.sum[, col.mets])] <- 0
-
-## merge mean transect and site level metrics together
-# veg.site.sum <- merge(veg.site.sum.transect,
-#                       veg.site.sum)
+veg.site..yr.sr.sum[, col.mets][is.na(veg.site..yr.sr.sum[, col.mets])] <- 0
 
 
 
 layout(matrix(1:3, nrow=3))
 par(mar=c(1,1,1,1))
-hist(veg.site.sum$VegAbundance)
-hist(veg.site.sum$VegRichness)
-hist(veg.site.sum$VegDiversity)
+hist(veg.site..yr.sr.sum$VegAbundance)
+hist(veg.site..yr.sr.sum$VegRichness)
+hist(veg.site..yr.sr.sum$VegDiversity)
 
 ## *******************************************************************
 ##  rarefied richness veg
 ## *******************************************************************
 
-## calculate and append rarefied bee abundance data
-# veg.rare <- makeRarefyComm(veg,
-#                                    higher.level="PlantGenusSpecies")
-# 
-# colnames(veg.rare)[4] <- "FlowerRareRichness"
-# 
-# veg.site.sum <- merge(veg.site.sum, veg.rare, all.x=TRUE)
-# 
-# veg.site.sum$FlowerRareRichness[is.na(veg.site.sum$FlowerRareRichness)] <- 0
+# calculate and append rarefied floral abundance data
+veg.rare <- makeRarefyComm(veg,
+                                   higher.level="PlantGenusSpecies")
+
+colnames(veg.rare)[3] <- "FlowerRareRichness"
+
+veg.site..yr.sr.sum <- merge(veg.site..yr.sr.sum, veg.rare, all.x=TRUE)
+
+veg.site..yr.sr.sum$FlowerRareRichness[is.na(veg.site..yr.sr.sum$FlowerRareRichness)] <- 0
 
 ## *******************************************************************
 
