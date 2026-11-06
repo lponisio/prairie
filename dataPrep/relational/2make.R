@@ -271,7 +271,9 @@ write.csv(dbReadTable(con, 'tblPlant'),
 ## 5. Specimens:
 ## *******************************************************
 
-keep <- c('Site', 'SampleRound', 'UniqueID', 'Observer', 'InsectFK',
+keep <- c('Site', 'SampleRound', 'BurnUnburned',
+          'Date',
+          'UniqueID', 'Observer', 'InsectFK',
           'PlantFK', 'ConditionsFK', 'GeographyFK')
 
 specimens <- specimens[keep]
@@ -291,7 +293,10 @@ print(paste("before traditional, dim=", nrow(specimens)))
 ## 6. quadrats:
 ## *******************************************************
 
-keep <- c('PlantFK',
+keep <- c("Site", "BurnUnburned", 
+          "Block", "Date", 
+          "SampleRound", 
+          'PlantFK',
           'ConditionsFK',
           'BloomStatus',
           'PlantCount',
