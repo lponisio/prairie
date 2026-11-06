@@ -166,13 +166,10 @@ site.sum <- spec[!is.na(spec$GenusSpecies),] %>%
             .by = c(Site, Year, SampleRound))
 
 
-col.mets <- c("PollAbundance",
-            "HBAbundance",
+col.mets <- c("HBAbundance",
             "BombusAbundance", 
             "NonBombusHBAbundance",
-            "PollRichness",
             "VisitedFloralRichness",
-            "PollDiversity", 
             "VisitedFloralDiversity",
             "BeeAbundance", 
             "BeeRichness",
