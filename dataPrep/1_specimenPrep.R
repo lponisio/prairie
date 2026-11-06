@@ -141,16 +141,16 @@ site.sp.yr.sr <- spec %>%
             .by = c(Site, Year, SampleRound, GenusSpecies))
 
 site.sum <- spec[!is.na(spec$GenusSpecies),] %>%
-  summarise(PollAbundance = length(GenusSpecies),
+  summarise(BeeAbundance = length(GenusSpecies),
             HBAbundance = sum(GenusSpecies == "Apis mellifera"),
             BombusAbundance = sum(Genus == "Bombus"),
             NonBombusHBAbundance =
               sum(Genus != "Bombus" & Genus != "Apis"),
-            PollRichness= length(unique(GenusSpecies)),
+            BeeRichness= length(unique(GenusSpecies)),
             VisitedFloralRichness= length(unique(PlantGenusSpecies)),
             BombusRichness= length(unique(GenusSpecies[Genus ==
                                                        "Bombus"])),
-            PollDiversity=vegan:::diversity(table(GenusSpecies),
+            BeeDiversity=vegan:::diversity(table(GenusSpecies),
                                            index="shannon"),
             VisitedFloralDiversity=vegan:::diversity(
               table(PlantGenusSpecies),
