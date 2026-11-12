@@ -389,3 +389,39 @@ write.csv(spec, file='../data/spec_net.csv',
 
 save(spec, file='../data/spec_net.Rdata')
 
+###############################################################
+##      Interaction Richness, Diversity & Uniqueness        ##
+##            Year/Site/Sample Round Level                  ##
+
+load('../data/spec_net.Rdata')
+
+Interactions <- spec %>%
+  select(Year, Site, SampleRound, GenusSpecies, PlantGenusSpecies) %>% 
+  mutate(
+    PlantPolInteraction = paste0(GenusSpecies, PlantGenusSpecies),
+    YearSiteSampleRound = paste(Year, Site, SampleRound)
+  ) 
+
+IntAbundances <- Interaction %>% 
+  summarise(
+    n = n(), .by = c(Year, Site, SampleRound, PlantPolInteraction)
+  )
+
+IntMetrics <- IntAbundances %>% 
+  summarise(
+    IntRichness <- n_distinct(PlantPolInteraction), 
+    IntDiversity <- diversity(n, index = "shannon"),
+    .by = c(Year, Site, SampleRound)
+  )
+
+interactionsByGroup <- Interactions %>% 
+  distinct(Year, Site, SampleRound, YearSiteSampleRound, PlantPolInteraction) %>% 
+  mutate(
+    NGroups = n_distinct(YearSiteSampleRound),
+    UniqueToGroup = NGroups == 1,
+    .by = PlantPolInteraction
+  ) %>% 
+  summarise(
+    UniqueInteractions = n(),
+    .by = c(Year, Site, SampleRound)
+  )
