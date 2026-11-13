@@ -75,7 +75,8 @@ pisgah_buffers   <- map(pisgah_results, "buffers")  %>% bind_rows(.id = "site")
 pisgah_centroids <- map(pisgah_results, "centroid") %>% bind_rows()
 
 ## Save results
-saveRDS(pisgah_results, file = "../../pugent-prairie/data/pyrodiversity/pisgahBurnResults.rds")
+saveRDS(pisgah_results, file = "../../prairie/data/pyrodiversity/pisgahBurnResults.rds")
+pisgah_results <- readRDS("../../prairie/data/pyrodiversity/pisgahBurnResults.rds")
 
 ## Convert from list to data frame
 pisgah_all <- map(pisgahBurnResults, "burns") %>% 
@@ -98,7 +99,18 @@ pisgah_all <- bind_rows(
   pisgah_all, noburnSites
 )
 
-write.csv(pisgah_all, file = "../../pugent-prairie/data/pyrodiversity/pisgahBurnResults.csv")
+
+pisgah_all <- pisgah_all %>% 
+  mutate(Site = case_match(
+    Site, 
+    "DorrisRanch" ~ "Dorris Ranch",
+    "NorthBottomland" ~ "North Bottomland",
+    "SouthBottomland" ~ "South Bottomland",
+    "TurtleFlats" ~ "Turtle Flats",
+    .default = Site
+  ))
+
+write.csv(pisgah_all, file = "../../prairie/data/pyrodiversity/pisgahBurnResults.csv")
 
 #################################
 ####     Plot Burn Units     ####
