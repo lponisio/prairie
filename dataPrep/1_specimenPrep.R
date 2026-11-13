@@ -384,16 +384,10 @@ dim(spec)
 
 spec[, col.mets][is.na(spec[, col.mets])] <- 0
 
-write.csv(spec, file='../data/spec_net.csv',
-          row.names=FALSE)
-
-save(spec, file='../data/spec_net.Rdata')
-
 ###############################################################
 ##      Interaction Richness, Diversity & Uniqueness        ##
 ##            Year/Site/Sample Round Level                  ##
 
-load('../data/spec_net.Rdata')
 
 Interactions <- spec %>%
   select(Year, Site, SampleRound, GenusSpecies, PlantGenusSpecies) %>% 
@@ -402,26 +396,59 @@ Interactions <- spec %>%
     YearSiteSampleRound = paste(Year, Site, SampleRound)
   ) 
 
-IntAbundances <- Interaction %>% 
+IntAbundances <- Interactions %>% 
   summarise(
     n = n(), .by = c(Year, Site, SampleRound, PlantPolInteraction)
   )
 
-IntMetrics <- IntAbundances %>% 
+IntTaxaMetrics <- IntAbundances %>% 
   summarise(
-    IntRichness <- n_distinct(PlantPolInteraction), 
-    IntDiversity <- diversity(n, index = "shannon"),
+    IntRichnessSiteYearSR = n_distinct(PlantPolInteraction), 
+    IntDiversitySiteYearSR = diversity(n, index = "shannon"),
     .by = c(Year, Site, SampleRound)
   )
 
-interactionsByGroup <- Interactions %>% 
-  distinct(Year, Site, SampleRound, YearSiteSampleRound, PlantPolInteraction) %>% 
+
+## unique interactions per Year/Site combination
+IntUniqueSiteYear <- Interactions %>% 
+  filter(!is.na(GenusSpecies), !is.na(PlantGenusSpecies)) %>% 
+  distinct(Year, Site, PlantPolInteraction) %>% 
   mutate(
-    NGroups = n_distinct(YearSiteSampleRound),
-    UniqueToGroup = NGroups == 1,
-    .by = PlantPolInteraction
+    NSites = n_distinct(Site),
+    UniqueToSite = NSites == 1,
+    .by = c(Year, PlantPolInteraction)
   ) %>% 
   summarise(
-    UniqueInteractions = n(),
+    UniqueIntSiteYear = sum(UniqueToSite),
+    .by = c(Year, Site)
+  )
+
+## unique interactions per Year/Site/Sample Round combination
+IntUniqueSiteSRYear <- Interactions %>% 
+  filter(!is.na(GenusSpecies), !is.na(PlantGenusSpecies)) %>% 
+  distinct(Year, Site, SampleRound, PlantPolInteraction) %>% 
+  mutate(
+    NSites = n_distinct(Site),
+    UniqueToSite = NSites == 1,
+    .by = c(Year, SampleRound, PlantPolInteraction)
+  ) %>% 
+  summarise(
+    UniqueIntSiteYearSR = sum(UniqueToSite),
     .by = c(Year, Site, SampleRound)
   )
+
+## Merge datasets
+InteractionData <- IntUniqueSiteSRYear %>% 
+  left_join(IntUniqueSiteYear, by = c("Year", "Site"))
+
+InteractionData <- IntTaxaMetrics %>% 
+  left_join(InteractionData, by = c("Year", "Site", "SampleRound"))
+
+spec.net <- spec %>% 
+  left_join(InteractionData, by = c("Year", "Site", "SampleRound"),
+            relationship = "many-to-one")
+
+write.csv(spec.net, file='../data/spec_net.csv',
+          row.names=FALSE)
+
+save(spec.net, file='../data/spec_net.Rdata')
