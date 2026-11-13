@@ -1,5 +1,4 @@
-#This script tests hypotheses for functional diversity using
-#Bayesian modeling approach
+#This script fits and plots Bayesian models
 rm(list=ls())
 library(brms)
 library(purrr)
@@ -22,15 +21,11 @@ library(loo)
 setwd('C:/')
 source("lab_paths.R")
 local.path
-dir.bombus <- file.path(local.path, "pugent-prairie/dataPrep")
+dir.bombus <- file.path(local.path, "prairie/dataPrep")
 setwd(dir.bombus)
 load('../data/spec_traits.Rdata')
-load('../data/landcover/weighted_proximity_area.RData')
-load('../data/landcover/PConnectivityResults.RData')
-load('../data/landcover/LandscapeMetricsResults.RData')
-pyrodiversity <- read.csv('../../pugent_saved/data/raw/pyrodiversity.csv')
-traits <- read_csv('../../pugent_saved/data/raw/complete_bee_traits.csv')
-climate <- read_csv('../data/climate/climate.csv')
+load('../data/landcover/HabitatArea.RData')
+pyrodiversity <- read.csv('../data/pyrodiversity/pisgahBurnResults.csv')
 
 source("src/fit_model.R")
 source("src/save_models.R")
@@ -41,20 +36,9 @@ source("src/plot_flexible.R")
 pyrodiversity$Year <- as.factor(pyrodiversity$Year)
 pyrodiversity$Site <- as.factor(pyrodiversity$Site)
 
-climate$Site <- as.factor(climate$Site)
-climate$Year <- as.factor(climate$Year)
-climate$SampleRound <- as.factor(climate$SampleRound)
-
 spec.net$SampleRound <- as.factor(spec.net$SampleRound)
 spec.net$Site <- as.factor(spec.net$Site)
 spec.net$Year <- as.factor(spec.net$Year)
-
-climate <- climate %>% 
-  mutate(Site = case_when(
-    Site == "Glacial" ~ "Glacial Heritage",
-    Site == "Wolf" ~ "Wolf Haven",
-    TRUE ~ Site))
-
 
 ## Site + Year + Sampleround level ##
 spec.net.SR <- spec.net %>% 
@@ -64,18 +48,13 @@ spec.net.SR <- spec.net %>%
   summarise(
     BeeFDivSiteYearSR = first(BeeFDivSiteYearSR),
     BeeFDisSiteYearSR = first(BeeFDisSiteYearSR),
-    BeeFEveSiteYearSR = first(BeeFEveSiteYearSR),
     BeeRichness = first(BeeRichness),
     BeeDiversity = first(BeeDiversity),
     BeeAbundance = first(BeeAbundance),
-    VegRarefiedRichness = first(VegRarefiedRichness),
     VegDiversity = first(VegDiversity),
-    pyrodiv = first(pyrodiv),
-    GDD = first(GDD),
-    APi = first(APi),
+    pyrodiv = first(shannon),
     logBeeFDivSiteYearSR = log(BeeFDivSiteYearSR),
-    logBeeFDisSiteYearSR = log(BeeFDisSiteYearSR), 
-    logBeeFEveSiteYearSR = log(BeeFEveSiteYearSR)) 
+    logBeeFDisSiteYearSR = log(BeeFDisSiteYearSR)) 
 
 #####################################################################
 # Pyrodiversity
