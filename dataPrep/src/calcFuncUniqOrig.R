@@ -1,0 +1,282 @@
+library(FD)
+library(cluster)
+
+
+## standardize a vector
+standardize <- function(x)
+  (x-mean(x, na.rm=TRUE))/sd(x, na.rm=TRUE)
+
+calcFuncUniqOrigComm <- function(traits, traits.2.keep,
+                                 weights,
+                                 type = "network",
+                                 a,
+                                 comm_id = "CommID",
+                                 w.abun = TRUE,
+                                 ...){
+  
+  # drop unwanted traits
+  these.traits <- traits[, traits.2.keep, drop = FALSE]
+  
+  # ---- ALIGN traits and community matrix ----
+  sp <- intersect(rownames(these.traits), colnames(a))
+  if (length(sp) < 2) {
+    stop("Need >= 2 shared species between traits rownames and community colnames.")
+  }
+  these.traits <- these.traits[sp, , drop = FALSE]
+  a <- a[, sp, drop = FALSE]
+  stopifnot(identical(rownames(these.traits), colnames(a)))
+  
+  # ---- Standardize numeric traits ----
+  for (this.trait in traits.2.keep) {
+    if (is.numeric(these.traits[, this.trait])) {
+      message("numeric ", this.trait)
+      these.traits[, this.trait] <- standardize(these.traits[, this.trait])
+    }
+  }
+  
+  # ---- Remove species with NA in any trait ----
+  complete_sp <- rownames(these.traits)[complete.cases(these.traits)]
+  if (length(complete_sp) < 2) {
+    stop("Fewer than 2 species remain after removing NAs.")
+  }
+  these.traits <- these.traits[complete_sp, , drop = FALSE]
+  a <- a[, complete_sp, drop = FALSE]
+  
+  # ---- Remove sites with fewer than 2 species after filtering ----
+  a <- a[rowSums(a > 0) >= 2, , drop = FALSE]
+  if (nrow(a) == 0) stop("No sites have >= 2 species after NA filtering.")
+  
+  # ---- Compute Euclidean distance on standardized traits ----
+ # trait.dist.euc <- dist(these.traits, method = "euclidean")
+  
+  # ---- Remove species that no longer occur in any remaining site ----
+  a <- a[, colSums(a) > 0, drop = FALSE]
+  these.traits <- these.traits[colnames(a), , drop = FALSE]
+  
+  # ---- Compute Gower distance to handle categorical and numeric traits ----
+  trait.dist.gow <- daisy(these.traits, metric = "gower")
+  
+  # ---- Run dbFD with Euclidean distance ----
+  site.func.mets <- dbFD(trait.dist.gow,
+                         a      = a,
+                         corr   = "lingoes",
+                         print.pco = TRUE,
+                         w.abun = w.abun,
+                         m      = "min",
+                         ...)
+  
+  coords <- site.func.mets$x.axes
+  
+  coords.comm <- vector(mode = "list", length = nrow(a))
+  for (i in seq_len(nrow(a))) {
+    present <- unlist(a[i, ]) > 0
+    spp <- names(which(present))
+    coords.comm[[i]] <- coords[spp, , drop = FALSE]
+  }
+  
+  calcSiteLevelSpMets <- function(coords_sub){
+    if (nrow(coords_sub) < 2) {
+      out <- data.frame(uniq = NA_real_, originality = NA_real_)
+      rownames(out) <- rownames(coords_sub)
+      return(out)
+    }
+    
+    centr <- apply(coords_sub, 2, mean)
+    coords2 <- rbind(coords_sub, centr)
+    rownames(coords2)[nrow(coords2)] <- "centr"
+    
+    dists_centr <- as.matrix(dist(coords2, diag = TRUE, upper = TRUE))
+    diag(dists_centr) <- NA
+    
+    originality <- dists_centr[rownames(coords_sub), "centr"]
+    
+    nn_mat <- dists_centr[rownames(coords_sub), rownames(coords_sub), drop = FALSE]
+    uniq <- apply(nn_mat, 1, min, na.rm = TRUE)
+    
+    out <- as.data.frame(cbind(scale(uniq), scale(originality)))
+    colnames(out) <- c("uniq", "originality")
+    out
+  }
+  
+  by.comm.mets <- lapply(coords.comm, calcSiteLevelSpMets)
+  names(by.comm.mets) <- rownames(a)
+  
+  for (i in seq_along(by.comm.mets)) {
+    this.name <- names(by.comm.mets)[i]
+    this.comm <- by.comm.mets[[i]]
+    this.comm[[comm_id]] <- this.name
+    this.comm$GenusSpecies <- rownames(this.comm)
+    rownames(this.comm) <- NULL
+    by.comm.mets[[i]] <- this.comm
+  }
+  
+  by.comm.mets <- do.call(rbind, by.comm.mets)
+  rownames(by.comm.mets) <- NULL
+  
+  list(fd = site.func.mets,
+       by.comm.mets = by.comm.mets)
+}
+
+# calcFuncUniqOrigComm <- function(traits, traits.2.keep,
+#                                  weights,
+#                                  type = "network",
+#                                  a,
+#                                  comm_id = "CommID",
+#                                  w.abun = TRUE,
+#                                  ...){
+# 
+#   # drop unwanted traits
+#   these.traits <- traits[, traits.2.keep, drop = FALSE]
+# 
+#   # ---- ALIGN traits and community matrix (this is the key fix) ----
+#   sp <- intersect(rownames(these.traits), colnames(a))
+#   if (length(sp) < 2) {
+#     stop("Need >= 2 shared species between traits rownames and community colnames.")
+#   }
+#   these.traits <- these.traits[sp, , drop = FALSE]
+#   a <- a[, sp, drop = FALSE]
+#   stopifnot(identical(rownames(these.traits), colnames(a)))
+#   # ---------------------------------------------------------------
+# 
+#   # convert traits with only 2 categories to binary numeric; others factors; numeric standardized
+#   for (this.trait in traits.2.keep) {
+#     out.traits <- unique(these.traits[, this.trait])
+#     out.traits <- out.traits[!is.na(out.traits)]
+# 
+#     if (!is.numeric(out.traits)) {
+#       if (length(out.traits) == 2) {
+#         message("cat == 2 ", this.trait)
+#         these.traits[, this.trait] <- as.numeric(as.factor(these.traits[, this.trait])) - 1
+#       } else {
+#         message("cat > 2 ", this.trait)
+#         these.traits[, this.trait] <- as.factor(these.traits[, this.trait])
+#       }
+#     } else {
+#       message("numeric ", this.trait)
+#       these.traits[, this.trait] <- standardize(these.traits[, this.trait])
+#     }
+#   }
+# 
+#   site.func.mets <- dbFD(trait.dist.euc,
+#                          a = a,
+#                          w = weights,
+#                          corr = "lingoes",
+#                          print.pco = TRUE,
+#                          w.abun = w.abun,
+#                          m = 10,
+#                          ...)
+# 
+#   coords <- site.func.mets$x.axes
+# 
+#   coords.comm <- vector(mode = "list", length = nrow(a))
+#   for (i in seq_len(nrow(a))) {
+#     # keep only present spp rows (and preserve rownames)
+#     present <- unlist(a[i, ]) > 0
+#     spp <- names(which(present))
+#     coords.comm[[i]] <- coords[spp, , drop = FALSE]
+#   }
+# 
+#   calcSiteLevelSpMets <- function(coords_sub){
+#     if (nrow(coords_sub) < 2) {
+#       out <- data.frame(uniq = NA_real_, originality = NA_real_)
+#       rownames(out) <- rownames(coords_sub)
+#       return(out)
+#     }
+# 
+#     centr <- apply(coords_sub, 2, mean)
+# 
+#     coords2 <- rbind(coords_sub, centr)
+#     rownames(coords2)[nrow(coords2)] <- "centr"
+# 
+#     dists_centr <- as.matrix(dist(coords2, diag = TRUE, upper = TRUE))
+#     diag(dists_centr) <- NA
+# 
+#     originality <- dists_centr[rownames(coords_sub), "centr"]
+# 
+#     # nearest neighbour among present species
+#     nn_mat <- dists_centr[rownames(coords_sub), rownames(coords_sub), drop = FALSE]
+#     uniq <- apply(nn_mat, 1, min, na.rm = TRUE)
+# 
+#     out <- as.data.frame(cbind(scale(uniq), scale(originality)))
+#     colnames(out) <- c("uniq", "originality")
+#     out
+#   }
+# 
+#   by.comm.mets <- lapply(coords.comm, calcSiteLevelSpMets)
+#   names(by.comm.mets) <- rownames(a)
+# 
+#   for (i in seq_along(by.comm.mets)) {
+#     this.name <- names(by.comm.mets)[i]
+#     this.comm <- by.comm.mets[[i]]
+# 
+#     this.comm[[comm_id]] <- this.name
+#     this.comm$GenusSpecies <- rownames(this.comm)
+#     rownames(this.comm) <- NULL
+# 
+#     by.comm.mets[[i]] <- this.comm
+#   }
+# 
+#   by.comm.mets <- do.call(rbind, by.comm.mets)
+#   rownames(by.comm.mets) <- NULL
+# 
+#   list(fd = site.func.mets,
+#        by.comm.mets = by.comm.mets)
+# }
+
+make_comm_matrix <- function(df, id_col, sp_col = "GenusSpecies") {
+  id_sym <- rlang::sym(id_col)
+  sp_sym <- rlang::sym(sp_col)
+
+  df %>%
+    filter(!is.na(!!sp_sym), !!sp_sym != "") %>%
+    count(!!id_sym, !!sp_sym, name = "N") %>%
+    tidyr::pivot_wider(names_from = !!sp_sym, values_from = N, values_fill = 0) %>%
+    tibble::column_to_rownames(id_col) %>%
+    as.data.frame()
+}
+
+add_func_uniq_orig <- function(spec.net, traits,
+                               id_col,
+                               traits.2.keep, weights,
+                               suffix,
+                               add_fd = FALSE,
+                               w.abun = TRUE,
+                               ...) {
+
+  # build comm matrix for this grouping
+  comms <- make_comm_matrix(spec.net, id_col = id_col)
+
+  # run FD + uniqueness/originality
+  out <- calcFuncUniqOrigComm(traits,
+                             traits.2.keep = traits.2.keep,
+                             weights = weights,
+                             a = comms,
+                             comm_id = id_col,
+                             w.abun = w.abun,
+                             ...)
+
+  # species-by-community uniq/orig
+  by_sp <- out$by.comm.mets %>%
+    dplyr::rename(
+      !!paste0("uniq", suffix) := uniq,
+      !!paste0("originality", suffix) := originality
+    )
+
+  spec.net <- spec.net %>%
+    dplyr::left_join(by_sp, by = c("GenusSpecies", id_col))
+
+  # optional: attach site/community-level FD metrics too
+  if (add_fd) {
+    fd <- tibble::tibble(
+      !!id_col := names(out$fd$FDis),
+      !!paste0("BeeFDis", suffix) := unname(out$fd$FDis),
+      !!paste0("BeeFEve", suffix) := unname(out$fd$FEve),
+      !!paste0("BeeFDiv", suffix) := unname(out$fd$FDiv)
+    )
+    spec.net <- spec.net %>%
+      dplyr::left_join(fd, by = id_col)
+  }
+
+  spec.net
+}
+
