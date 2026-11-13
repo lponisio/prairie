@@ -1,24 +1,24 @@
 ## Create dataframe with class type to merge final results
 class_lookup <- data.frame(
-  Value = 0:8,
-  Class_name = c("Open Water", "Deciduous Forest", "Evergreen Forest", 
-                 "Shrubland", "Grassland/Herbaceous",  
-                 "Planted / Cultivated", "Pasture/Hay",
-                 "Developed/Barren", "Wetlands"))
+  Value = 0:6,
+  Class_name = c("Planted/Cultivated", "Wetland",
+                 "Herbaceous", "Developed",
+                 "Water", "Evergreen Forest", "Deciduous Forest"))
                   
 
 ## This function calculates the weighted proximity-area for each land cover class within 
 ## a designated buffer radius.
 
-calculateWeightedProximityArea <- function(rasters, centroids, years, buffer_dists,
-                                           site_field = "MERGE_SRC",
+calcHabitatArea <- function(rasters, centroids, years, buffer_dists,
+                                           site_field = NULL,
                                            #bee_size_labels = NULL,
                                            class_lookup = NULL)  {
+  site_ids <- centroids[[site_field]][,1]
   results <- list()
   
   for (yr in years) {
     raster <- rasters[[as.character(yr)]]
-    cell_area <- prod(res(raster))
+    cell_area <- prod(terra::res(raster))
     
     for (i in seq_len(nrow(centroids))) {
       # Pulls site name from column in site_field for current row i
@@ -29,13 +29,13 @@ calculateWeightedProximityArea <- function(rasters, centroids, years, buffer_dis
       for (buf_dist in buffer_dists) {
         
         # Buffer around centroid
-        buf <- buffer(pt, width = buf_dist)
+        buf <- terra::buffer(pt, width = buf_dist)
         
         # Crop and mask raster to buffer
-        raster_mask <- mask(crop(raster, buf))
+        raster_mask <- terra::mask(terra::crop(raster, buf), buf)
         
         # Counts how many cells in each land cover class
-        class_counts <- freq(raster_mask)
+        class_counts <- terra::freq(raster_mask)
         
         class_summary <- data.frame(
           Year = yr,
