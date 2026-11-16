@@ -81,7 +81,7 @@ pisgah_all <- map(pisgah_results, "burns") %>%
 
 ## Add data for sites with no burns in 10 year period
 noburnSites <- data.frame(
-  site = c(rep("North Bottomlands", times = 3), rep("Sorrenson", times = 3), rep("Turtle Flats", times = 3)),
+  site = c(rep("Dorris Ranch", times = 3), rep("Sorrenson", times = 3), rep("Turtle Flats", times = 3)),
   buffer_m = rep(c(250, 500, 1000), times = 3),
   burn_hist = rep(c("0000000000"), times = 9),
   years_burned = rep("none", times = 9),
@@ -99,10 +99,8 @@ pisgah_all <- bind_rows(
 pisgah_all <- pisgah_all %>% 
   mutate(site = case_match(
     site, 
-    "DorrisRanch" ~ "Dorris Ranch",
-    "NorthBottomland" ~ "North Bottomland",
+    "SpringBox" ~ "North Bottomland",
     "SouthBottomland" ~ "South Bottomland",
-    "TurtleFlats" ~ "Turtle Flats",
     .default = site
   )) %>% 
   rename(Site = site)
