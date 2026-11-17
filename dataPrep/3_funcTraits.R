@@ -36,19 +36,12 @@ sort(lost.species)
 traits <- traits[traits$GenusSpecies %in% spec.net$GenusSpecies,]
 traits <- as.data.frame(traits)
 
-bee.traits <- c("NestLocation", 
-                "NestConstruction", "NestPartition",
-                "NestLining", "PrimaryNestMaterial", 
-                "Lecty", "Sociality", "MeanITD", 
-                "PollenCarry", "d")
-
-
 #traits$Proboscis <- as.factor(traits$Proboscis)
 traits$Sociality <- as.factor(traits$Sociality)
 traits$NestLocation <- as.factor(traits$NestLocation)
 traits$NestConstruction <- as.factor(traits$NestConstruction)
-traits$NestPartition <- as.factor(traits$NestPartition)
-traits$NestLining <- as.factor(traits$NestLining)
+traits$NestPartitions <- as.factor(traits$NestPartitions)
+# traits$NestLinning <- as.factor(traits$NestLinning)
 traits$PrimaryNestMaterial <- as.factor(traits$PrimaryNestMaterial)
 traits$Lecty <- as.factor(traits$Lecty)
 traits$PollenCarry <- as.factor(traits$PollenCarry)
@@ -63,9 +56,19 @@ traits <- traits %>%
 #Check rownames
 rownames(traits) 
 
-## We grouped the traits based on what they discuss. so for example, we
+#Subset bee traits
+bee.traits <- c("NestLocation", 
+                "NestConstruction", "NestPartitions",
+                #"NestLinning", 
+                "PrimaryNestMaterial", 
+                "Lecty", "Sociality", "MeanITD", 
+                "PollenCarry", "d")
+
+traits <- traits[, names(traits) %in% bee.traits]
+
+## We grouped the traits. so for example, we
 ## have 3 nesting traits, so weighted each one by 1/3.
-bee.weights <- c(rep(1/5, 5), rep(1, 5))
+bee.weights <- c(rep(1/4, 4), rep(1, 5))
 length(bee.weights) == length(bee.traits)
 
 print("\nUnique values per trait:")
@@ -136,18 +139,21 @@ spec.net <- spec.net %>%
 spec.net <- add_func_uniq_orig(spec.net, traits,
                                id_col = "Site",
                                traits.2.keep = bee.traits, weights = bee.weights,
+                               calc.CWM = FALSE,
                                suffix = "Site",
                                add_fd = TRUE)
 
 spec.net <- add_func_uniq_orig(spec.net, traits,
                                id_col = "SiteYearSR",
                                traits.2.keep = bee.traits, weights = bee.weights,
+                               calc.CWM = FALSE,
                                suffix = "SiteYearSR",
                                add_fd = TRUE)
 
 spec.net <- add_func_uniq_orig(spec.net, traits,
                                id_col = "SiteYear",
                                traits.2.keep = bee.traits, weights = bee.weights,
+                               calc.CWM = FALSE,
                                suffix = "SiteYear",
                                add_fd = TRUE)
 

@@ -56,13 +56,19 @@ calcFuncUniqOrigComm <- function(traits, traits.2.keep,
   # ---- Compute Gower distance to handle categorical and numeric traits ----
   trait.dist.gow <- daisy(these.traits, metric = "gower")
   
+  print("Are there NAs")
+  print(any(is.na(a))) 
+  print("Are there zeros after removing species that dont occur in any site?") # any NAs?
+  print(summary(rowSums(a)))                # any zeros?
+  
   # ---- Run dbFD with Euclidean distance ----
-  site.func.mets <- dbFD(trait.dist.gow,
+  site.func.mets <- dbFD(x = these.traits,
                          a      = a,
                          corr   = "lingoes",
                          print.pco = TRUE,
                          w.abun = w.abun,
                          m      = "min",
+                         w = weights,
                          ...)
   
   coords <- site.func.mets$x.axes
