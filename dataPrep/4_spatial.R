@@ -10,7 +10,7 @@ library(terra)
 library(landscapemetrics)
 library(tidyverse)
 library(lconnect)
-library(Makurhini)
+#library(Makurhini)
 library(sf)
 
 setwd('C:/')
@@ -21,7 +21,7 @@ dir.bombus <- file.path(local.path, "prairie/dataPrep")
 setwd(dir.bombus)
 
 dir.create("../data/landcover")
-source("src/calcArea.R")
+source("src/calcHabitatArea.R")
 # source("src/calcLandscapeMetrics.R")
 
 ## Create prairie centroids vector and list of rasters
@@ -33,7 +33,7 @@ centroids <- vect("../../prairie_saved/data/raw/spatial/pisgah_classification/HB
 
 rasters_dir <- "../../prairie_saved/data/raw/spatial/pisgah_classification"
 
-raster_files <- file.path(rasters_dir, paste0("L9_June", years, "_Final.tif"))
+raster_files <- file.path(rasters_dir, paste0("Pisgah_Final_Classification_", years, ".tif"))
 
 rasters <- setNames(lapply(raster_files, rast), years)
 
@@ -51,7 +51,29 @@ plot(centroids, add = TRUE, col = "red", pch = 19)
 
 is.factor(rasters[["2024"]])
 levels(rasters[["2024"]])
-freq(rasters[["2024"]])   # actual cell values present
+freq(rasters[["2024"]])
+
+## Pull the 2024 table and rename the column
+lv24 <- cats(rasters[["2024"]])[[1]]
+names(lv24)[names(lv24) == "Classname"] <- "Class_name"
+
+## Write it back to the raster
+levels(rasters[["2024"]]) <- lv24
+
+## Confirm
+names(cats(rasters[["2024"]])[[1]])
+levels(rasters[["2024"]])
+
+## Create lookup table
+lv <- cats(rasters[["2024"]])[[1]]
+names(lv)   
+class_lookup <- data.frame(Value = lv$Value, Class_name = lv$Class_name)
+
+## Check every year uses same labels
+for (yr in names(rasters)) {
+  lv <- cats(rasters[[yr]])[[1]]
+  print(yr); print(lv[, c("Value", "Class_name")])
+}
 
 #############################################
 ## -- Calculate weighted proximity area -- ##
@@ -79,6 +101,9 @@ HabitatArea <- HabitatArea %>%
               names_from = Class_name,
               values_from = c(Area_m2, Area_ha))
 
+# spaces and slashes become underscores, case kept
+HabitatArea <- HabitatArea %>%
+  janitor::clean_names(case = "none")
 
 HabitatArea <- HabitatArea %>% 
   mutate(Site = case_match(
@@ -90,22 +115,15 @@ HabitatArea <- HabitatArea %>%
     .default = Site
   ))
 
-HabitatAreaWPA$Year <- as.factor(HabitatArea$Year)
+#Rename to match puget prairies (for consistency)
+HabitatArea <- HabitatArea |> 
+  rename(Area_m2_Grassland_Herbaceous = Area_m2_Herbaceous)
+
+HabitatArea$Year <- as.factor(HabitatArea$Year)
 HabitatArea$Site <- as.factor(HabitatArea$Site)
 
 save(HabitatArea, file = "../data/landcover/HabitatArea.RData")
 write.csv(HabitatArea, "../data/landcover/HabitatArea.csv", row.names = FALSE)
-
-## Visualize data
-landscapeWPA |> ggplot(aes(x = Weighted_Area_m2)) + 
-  geom_histogram() +
-  facet_wrap(~ Class_name + Buffer_m, scales = "free") +
-  scale_x_continuous(labels = comma) +
-  labs(title = "Distribution of Weighted Proximity Area by Land Cover and Bee Foraging Distance",
-       x = "Weighted Area (m2)",
-       y = "Count") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ########################################
 ## -- Calculate landscape metrics -- ###

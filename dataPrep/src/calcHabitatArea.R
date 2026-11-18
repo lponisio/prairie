@@ -37,6 +37,9 @@ calcHabitatArea <- function(rasters, centroids, years, buffer_dists,
         # Counts how many cells in each land cover class
         class_counts <- terra::freq(raster_mask)
         
+        class_counts$value <- class_lookup$Value[match(class_counts$value, class_lookup$Class_name)]
+        stopifnot(!anyNA(class_counts$value))   # catches any label that doesn't match the lookup
+        
         class_summary <- data.frame(
           Year = yr,
           Site = site_id,
