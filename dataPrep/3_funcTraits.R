@@ -58,17 +58,14 @@ rownames(traits)
 
 #Subset bee traits
 bee.traits <- c("NestLocation", 
-                "NestConstruction", "NestPartitions",
-                #"NestLinning", 
-                "PrimaryNestMaterial", 
-                "Lecty", "Sociality", "MeanITD", 
+                "NestConstruction","Sociality", "MeanITD", 
                 "PollenCarry", "d")
 
 traits <- traits[, names(traits) %in% bee.traits]
 
 ## We grouped the traits. so for example, we
 ## have 3 nesting traits, so weighted each one by 1/3.
-bee.weights <- c(rep(1/4, 4), rep(1, 5))
+bee.weights <- c(rep(1/2, 2), rep(1, 4))
 length(bee.weights) == length(bee.traits)
 
 print("\nUnique values per trait:")
@@ -141,6 +138,7 @@ spec.net <- add_func_uniq_orig(spec.net, traits,
                                traits.2.keep = bee.traits, weights = bee.weights,
                                calc.CWM = FALSE,
                                suffix = "Site",
+                               m = "min",
                                add_fd = TRUE)
 
 spec.net <- add_func_uniq_orig(spec.net, traits,
@@ -148,6 +146,7 @@ spec.net <- add_func_uniq_orig(spec.net, traits,
                                traits.2.keep = bee.traits, weights = bee.weights,
                                calc.CWM = FALSE,
                                suffix = "SiteYearSR",
+                               m = "min",
                                add_fd = TRUE)
 
 spec.net <- add_func_uniq_orig(spec.net, traits,
@@ -155,6 +154,7 @@ spec.net <- add_func_uniq_orig(spec.net, traits,
                                traits.2.keep = bee.traits, weights = bee.weights,
                                calc.CWM = FALSE,
                                suffix = "SiteYear",
+                               m = "min",
                                add_fd = TRUE)
 
 hist(spec.net$BeeFDivSiteYearSR)
