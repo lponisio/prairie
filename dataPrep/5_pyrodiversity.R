@@ -9,7 +9,7 @@ library(terra)
 library(landscapemetrics)
 library(tidyverse)
 library(lconnect)
-library(Makurhini)
+#library(Makurhini)
 library(sf)
 library(vegan)
 library(viridis)
@@ -59,44 +59,45 @@ options(scipen = 999)
 pisgah_list <- map(pisgah_list, st_transform, crs = 26910)
 
 ## Create burn histories and calculate pyrodiversity for Pisgah prairies
-pisgah_window <- 2014:2023
+pisgah_2024 <- 2014:2023
+pisgah_2025 <- 2015:2024
+
 pisgah_sites  <- c(Meadowlark = "^ML", 
   #MeadowlarkEast = "^MLEast", MeadowlarkSouth = "^MLSouth", 
                    SpringBox = "^SpringBox", SouthBottomland= "^SB")
 
-pisgah_results <- imap(pisgah_sites,
+pisgah_24_results <- imap(pisgah_sites,
                        ~ calcPyrodiversity(sf_list = pisgah_list, site = .y, pattern = .x,
-                                           window = pisgah_window,
+                                           window = pisgah_2024,
                                            buffers = c(250, 500, 1000)))
-## Pull burn frequencies, buffers, and centroids to plot
-pisgah_burns   <- map(pisgah_results, "burns")    %>% bind_rows() %>% 
-  mutate(burn_frequency = str_count(burn_hist, "1"))
-pisgah_buffers   <- map(pisgah_results, "buffers")  %>% bind_rows(.id = "site")
-pisgah_centroids <- map(pisgah_results, "centroid") %>% bind_rows()
 
-## Convert from list to data frame
-pisgah_all <- map(pisgah_results, "burns") %>% 
-  do.call(rbind, .) %>% 
-  st_drop_geometry()
-
-## Add data for sites with no burns in 10 year period
-noburnSites <- data.frame(
-  site = c(rep("Dorris Ranch", times = 3), rep("Sorrenson", times = 3), rep("Turtle Flats", times = 3)),
-  buffer_m = rep(c(250, 500, 1000), times = 3),
-  burn_hist = rep(c("0000000000"), times = 9),
-  years_burned = rep("none", times = 9),
-  area_sqm = rep(c(196349.54, 785398.16, 3141592.65), times = 3),
-  total_burned_sqm = rep(0, times = 9),
-  shannon = rep(0, times = 9)
-)
-
-# Merge datasets
-pisgah_all <- bind_rows(
-  pisgah_all, noburnSites
-)
+pisgah_25_results <- imap(pisgah_sites,
+                          ~ calcPyrodiversity(sf_list = pisgah_list, site = .y, pattern = .x,
+                                              window = pisgah_2025,
+                                              buffers = c(250, 500, 1000)))
 
 
-pisgah_all <- pisgah_all %>% 
+#Convert from list to dataframe
+results_by_year <- list(`2024` = puget_24_results,
+                        `2025` = puget_25_results)
+
+pisgah_pyro <- results_by_year |>
+  map(\(yr) yr |>
+        compact() |>                            # drops NULL site-years like Deschutes
+        map(\(x) st_drop_geometry(x$burns)) |>  # plain data frame per site
+        bind_rows()) |>
+  bind_rows(.id = "year") |>
+  mutate(year = as.integer(year))
+
+pisgah_pyro <- pisgah_pyro |>
+  distinct(year, site, buffer_m, burn_hist, years_burned, total_burned_sqm, shannon) |>
+  complete(year = 2017:2020,
+           site = names(puget_sites),
+           buffer_m = c(250, 500, 1000),
+           fill = list(burn_hist = c("0000000000"), years_burned = "none",
+                       total_burned_sqm = 0, shannon = 0))
+
+pisgah_all <- pisgah_pyro %>% 
   mutate(site = case_match(
     site, 
     "SpringBox" ~ "North Bottomland",
