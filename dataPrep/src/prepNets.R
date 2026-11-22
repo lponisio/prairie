@@ -74,7 +74,15 @@ makeNets <- function(spec.dat, net.type,
                     net.ty,
                     paste(species, collapse=""), poll.groups
        ))
-  return(sp.lev)
+  
+  ## network-level stats (one calculation per network)
+  dir.create("../data/netlevel_network_metrics", showWarnings = FALSE)
+  net.lev <- calcNetLevel(nets)
+  save(net.lev,
+       file = sprintf('../data/netlevel_network_metrics/%s_%s_%s.Rdata',
+                      net.ty, paste(species, collapse = ""), poll.groups))
+  
+  return(list(sp.lev = sp.lev, net.lev = net.lev))
 }
 
 

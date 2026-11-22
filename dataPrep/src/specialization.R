@@ -65,3 +65,50 @@ getSpec <- function(species.lev, names.net, seps="_"){
   }
   return(all.pp)
 }
+
+
+### Calculates network metrics at site, year, sample round level
+calcNetLevel <- function(nets,
+                         index = c("connectance", "NODF",
+                                   "H2", "niche overlap"),
+                         min.dim = 2,
+                         seps = "[.]") {
+  
+  n.total <- length(nets)
+  nets <- nets[sapply(nets, function(x) all(dim(x) >= min.dim))]
+  message(length(nets), " of ", n.total, " networks have >= ", min.dim,
+          " rows and columns and were used.")
+  
+  res <- lapply(names(nets), function(nm) {
+    x <- nets[[nm]]
+    
+    # compute each index separately so one failure doesn't drop the rest
+    vals <- lapply(index, function(idx) {
+      tryCatch(
+        suppressWarnings(suppressMessages(
+          bipartite::networklevel(x, index = idx, dist = "horn")
+        )),
+        error = function(e) NULL
+      )
+    })
+    vals <- unlist(vals)
+    
+    parts <- strsplit(nm, seps)[[1]]
+    out <- data.frame(Site = parts[1],
+                      Year = parts[2],
+                      SampleRound = if (length(parts) >= 3) parts[3] else NA_character_,
+                      n.plants = nrow(x),
+                      n.bees   = ncol(x),
+                      n.interactions = sum(x),
+                      stringsAsFactors = FALSE)
+    if (length(vals) > 0) {
+      v <- as.data.frame(as.list(vals), check.names = FALSE)
+      names(v) <- make.names(names(vals))
+      out <- cbind(out, v)
+    }
+    out
+  })
+  
+  # bind_rows fills columns missing from some networks with NA
+  dplyr::bind_rows(res)
+}

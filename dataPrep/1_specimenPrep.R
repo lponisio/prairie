@@ -113,6 +113,27 @@ spec$Species <- NULL
 spec$PlantGenusSpecies[spec$PlantGenusSpecies == "NA NA"] <- ""
 spec$GenusSpecies[spec$GenusSpecies == "NA NA"] <- ""
 
+## Fix misspellings and string inconsistencies 
+spec <- spec |>
+  filter(!is.na(PlantGenusSpecies), !PlantGenusSpecies %in% c("#N/A", "")) |>
+  mutate(
+    PlantGenusSpecies = PlantGenusSpecies |>
+      stringr::str_squish() |>
+      stringr::str_to_sentence() |>
+      recode("Bellardia viscosa"       = "Parentucellia viscosa",
+             "Rubis armeniacus"        = "Rubus armeniacus",
+             "Jacobaea vulgaris"       = "Senecio jacobaea",
+             "Toxicoscordion venenosm" = "Toxicoscordion venenosum",
+             "Geranium pusillium"      = "Geranium pusillum"),
+    GenusSpecies = GenusSpecies |>
+      stringr::str_squish() |>
+      # standardize morphospecies labels, keeping the number: "Sp.1" / "Sp. 2" -> "sp. 1" / "sp. 2"
+      stringr::str_replace("\\s[Ss]p\\.?\\s*(\\d+)$", " sp. \\1") |>
+      # lump "cf." identifications with the named species
+      stringr::str_replace("\\scf\\.\\s", " ") |>
+      stringr::str_replace("Utahense", "utahense")
+  )
+
 save(spec, file="../data/spec_all.Rdata")
 write.csv(spec, file="../data/spec_all.csv", row.names=FALSE)
 
@@ -231,20 +252,30 @@ nets.sr <- makeNets(spec, net.type="YearSR")
 nets.yr <- makeNets(spec, net.type="Year")
 
 ## Bees only
-nets.sr.bees <- makeNets(spec[spec$Family %in% bee.families,],
-                         net.type="YearSR",
-                         poll.groups="Bees")
-nets.yr.bees <- makeNets(spec[spec$Family %in% bee.families,],
-                         net.type="Year",
-                          poll.groups="Bees")
-
-
 dim(spec)
-spec <- merge(spec, nets.sr.bees[nets.sr.bees$speciesType ==
-                                      "higher.level",],
-                  all.x=TRUE)
+nets.sr.bees <- makeNets(spec[spec$Family %in% bee.families, ],
+                         net.type = "YearSR", poll.groups = "Bees")
+sp.lev  <- nets.sr.bees$sp.lev
+net.lev <- nets.sr.bees$net.lev
+
+#species-level
+spec <- merge(spec,
+              sp.lev[sp.lev$speciesType == "higher.level", ],
+              by = c("Site", "Year", "SampleRound", "GenusSpecies"),
+              all.x = TRUE)
 spec$SpSiteYear <- NULL
 spec$speciesType <- NULL
+
+spec <- spec |> 
+  rename(niche.overlap.SpLevel = niche.overlap)
+
+# network-level
+spec$SampleRound <- as.character(spec$SampleRound)
+net.lev$SampleRound <- as.character(net.lev$SampleRound)
+spec <- merge(spec, net.lev,
+              by = c("Site", "Year", "SampleRound"),
+              all.x = TRUE)
+
 dim(spec)
 
 ## *******************************************************************
