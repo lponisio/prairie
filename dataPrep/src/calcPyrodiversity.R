@@ -94,9 +94,9 @@ calcPyrodiversity <- function(sf_list, site, window, buffers,
       mutate(site = site, buffer_m = b,
              area_sqm = round(area_sqm, 2),
              total_burned_sqm = round(total_burned_sqm, 2),
-             shannon = shannon) %>%
+             pyrodiversity = shannon) %>%
       select(site, buffer_m, burn_hist, years_burned, area_sqm,
-             total_burned_sqm, shannon)
+             total_burned_sqm, pyrodiversity)
   }
   list(
     burns    = bind_rows(results),
@@ -137,5 +137,7 @@ plotBurnFreq <- function(burn_data, buffer_data, centroid_data, prairie, limit) 
     labs(title = prairie) +
     theme_void() +
     theme(legend.position = "right",
-          plot.title = element_text(face = "bold", size = 14, hjust = 0.5))
+          legend.text = element_text(size = 14),
+          legend.title = element_text(size = 16, face = "bold"),
+          plot.title = element_text(face = "bold", size = 16, hjust = 0.5))
 }
