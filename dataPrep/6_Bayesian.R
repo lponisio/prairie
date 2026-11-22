@@ -337,6 +337,37 @@ m_pyroNicheOverlap_250m <- fit_one(
   pp_type = "dens_overlay"
 )
 
+#######################################################
+## -- Veg diversity as a function of pyrodiversity -- ##
+########################################################
+######### Niche Overlap - Network Level ##########
+pyro <- c("Pyrodiversity + (1|Site)")
+
+m_pyroVegDiversity_1000m <- fit_one(
+  resp = "VegDiversity",
+  data = pyro_1000m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroVegDiversity_500m <- fit_one(
+  resp = "VegDiversity",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroVegDiversity_250m <- fit_one(
+  resp = "VegDiversity",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+
 ##################################################################################
 # -- Bee and interaction response as a function source habitat -- #
 ##################################################################################
