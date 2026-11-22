@@ -27,7 +27,7 @@ source("src/calcHabitatArea.R")
 ## Create prairie centroids vector and list of rasters
 ## Rasters were updated NLCD via supervised classification
 years <- c(2024, 2025)
-buffer_dists <- c(200, 500, 1000)
+buffer_dists <- c(250, 500, 1000)
 
 centroids <- vect("../../prairie_saved/data/raw/spatial/pisgah_classification/HBRA_centroids_merge.shp")
 
