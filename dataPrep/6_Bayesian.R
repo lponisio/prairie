@@ -33,18 +33,34 @@ source("src/plot_models.R")
 source("src/summarize_models.R")
 source("src/plot_flexible.R")
 
-pyrodiversity$Year <- as.factor(pyrodiversity$Year)
-pyrodiversity$Site <- as.factor(pyrodiversity$Site)
+pyrodiversity <- pyrodiversity |> 
+  rename(Site = site, Year = year, 
+         Pyrodiversity = pyrodiversity) |> 
+  mutate(Site = as.factor(Site),
+         Year = as.factor(Year)) |> 
+  select(-X) |> 
+  summarise(
+    Pyrodiversity = first(Pyrodiversity),
+    .by = c(Year, Site, buffer_m))
 
-spec.net$SampleRound <- as.factor(spec.net$SampleRound)
-spec.net$Site <- as.factor(spec.net$Site)
-spec.net$Year <- as.factor(spec.net$Year)
+spec.net <- spec.net |> 
+  mutate(Site = case_when(
+    Site =="DR" ~ "Dorris Ranch",
+    Site == "ML" ~ "Meadowlark",
+    Site == "NB" ~ "North Bottomland",
+    Site == "SB" ~ "South Bottomland",
+    Site == "SO" ~ "Sorrenson",
+    Site == "TF" ~ "Turtle Flats",
+    .default = as.character(Site))) |> 
+  mutate(SampleRound = as.factor(SampleRound),
+         Site = as.factor(Site),
+         Year = as.factor(Year)) |> 
+  filter(Site != "VP")
 
-## Site + Year + Sampleround level ##
-spec.net.SR <- spec.net %>% 
-  left_join(climate, by = c("Site", "Year", "SampleRound")) %>% 
-  left_join(pyrodiversity, by = c("Site", "Year")) %>% 
-  group_by(Site, Year, SampleRound) %>% 
+####### Site + Year + Sample Round level ########
+spec.net <- spec.net %>% 
+  left_join(pyrodiversity, by = c("Site", "Year"), 
+            relationship = "many-to-many") %>% 
   summarise(
     BeeFDivSiteYearSR = first(BeeFDivSiteYearSR),
     BeeFDisSiteYearSR = first(BeeFDisSiteYearSR),
@@ -52,215 +68,568 @@ spec.net.SR <- spec.net %>%
     BeeDiversity = first(BeeDiversity),
     BeeAbundance = first(BeeAbundance),
     VegDiversity = first(VegDiversity),
-    pyrodiv = first(shannon),
-    logBeeFDivSiteYearSR = log(BeeFDivSiteYearSR),
-    logBeeFDisSiteYearSR = log(BeeFDisSiteYearSR)) 
+    Pyrodiversity = first(Pyrodiversity),
+    IntRichnessSiteYearSR = first(IntRichnessSiteYearSR),   
+    IntDiversitySiteYearSR = first(IntDiversitySiteYearSR),       
+    UniqueIntSiteYearSR  = first(UniqueIntSiteYearSR),
+    NicheOverlap = first(niche.overlap.HL),
+    .by = c(Site, Year, SampleRound, buffer_m)) 
 
 #####################################################################
-# Pyrodiversity
-######################################################
-pyro <- c("scale(pyrodiv) + 
+##  Bee response as a function of pyrodiversity and veg diversity ###
+#####################################################################
+
+pyro <- c("scale(Pyrodiversity) + 
           scale(VegDiversity) + 
           (1|Site)")
 
-m_pyroFDis <- fit_one(
+# get_prior(BeeFDivSiteYearSR ~ scale(Pyrodiversity) + 
+#             scale(VegDiversity) + 
+#             (1|Site), data = pyro_500m)
+# 
+# pri <- c(
+#   prior(normal(0, 0.15), class = sd),       
+#   prior(normal(0.2, 0.3), class = Intercept)
+# )
+
+pyro_250m <- spec.net |> 
+  filter(buffer_m == 250)
+
+pyro_500m <- spec.net |> 
+  filter(buffer_m == 500)
+
+pyro_1000m <- spec.net |> 
+  filter(buffer_m == 1000)
+
+####### Visualize #######
+pairs(pyro_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
+                    "BeeDiversity", "BeeRichness", "BeeAbundance", 
+                    "NicheOverlap", "IntRichnessSiteYearSR",
+                    "IntDiversitySiteYearSR", "UniqueIntSiteYearSR",
+                    "VegDiversity", "Pyrodiversity")])
+
+######### Dispersion ##########
+m_pyroFDis_1000m <- fit_one(
   resp = "BeeFDisSiteYearSR",
-  data = spec.net.SR,
+  data = pyro_1000m,
   rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroFDis_500m <- fit_one(
+  resp = "BeeFDisSiteYearSR",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroFDis_250m <- fit_one(
+  resp = "BeeFDisSiteYearSR",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+####### Divergence #######
+m_pyroFDiv_1000m <- fit_one(
+  resp = "BeeFDivSiteYearSR",
+  data = pyro_1000m,
+  rhs  = pyro,
+  # prior = pri,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroFDiv_500m <- fit_one(
+  resp = "BeeFDivSiteYearSR",
+  data = pyro_500m,
+  rhs  = pyro,
+  # prior = pri,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
 # moderate evidence
-m_pyroFDiv <- fit_one(
+m_pyroFDiv_250m <- fit_one(
   resp = "BeeFDivSiteYearSR",
-  data = spec.net.SR,
+  data = pyro_250m,
   rhs  = pyro,
+  # prior = pri,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_pyroPollDiversity <- fit_one(
+######### Diversity ##########
+m_pyroPollDiversity_1000m <- fit_one(
   resp = "BeeDiversity",
-  data = spec.net.SR,
+  data = pyro_1000m,
   rhs  = pyro,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-#moderate evidence
-m_pyroPollRichness <- fit_one(
+m_pyroPollDiversity_500m <- fit_one(
+  resp = "BeeDiversity",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroPollDiversity_250m <- fit_one(
+  resp = "BeeDiversity",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+######### Richness ###########
+m_pyroPollRichness_1000m <- fit_one(
   resp = "BeeRichness",
-  data = spec.net.SR,
+  data = pyro_1000m,
   rhs  = pyro,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-#moderate evidence
-m_pyroAbundance <- fit_one(
+m_pyroPollRichness_500m <- fit_one(
+  resp = "BeeRichness",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroPollRichness_250m <- fit_one(
+  resp = "BeeRichness",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+######## Abundance #########
+m_pyroAbundance_1000m <- fit_one(
   resp = "BeeAbundance",
-  data = spec.net.SR,
+  data = pyro_1000m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroAbundance_500m <- fit_one(
+  resp = "BeeAbundance",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroAbundance_250m <- fit_one(
+  resp = "BeeAbundance",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+######### Interaction Richness ###########
+m_pyroIntRichness_1000m <- fit_one(
+  resp = "IntRichnessSiteYearSR",
+  data = pyro_1000m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroIntRichness_500m <- fit_one(
+  resp = "IntRichnessSiteYearSR",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroIntRichness_250m <- fit_one(
+  resp = "IntRichnessSiteYearSR",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+########## Interactoin Diversity #########
+m_pyroIntDiversity_1000m <- fit_one(
+  resp = "IntDiversitySiteYearSR",
+  data = pyro_1000m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroIntDiversity_500m <- fit_one(
+  resp = "IntDiversitySiteYearSR",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroIntDiversity_250m <- fit_one(
+  resp = "IntDiversitySiteYearSR",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+######### Unique Interactions ##########
+m_pyroUniqInt_1000m <- fit_one(
+  resp = "UniqueIntSiteYearSR",
+  data = pyro_1000m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroUniqInt_500m <- fit_one(
+  resp = "UniqueIntSiteYearSR",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroUniqInt_250m <- fit_one(
+  resp = "UniqueIntSiteYearSR",
+  data = pyro_250m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+######### Niche Overlap - Network Level ##########
+m_pyroNicheOverlap_1000m <- fit_one(
+  resp = "NicheOverlap",
+  data = pyro_1000m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroNicheOverlap_500m <- fit_one(
+  resp = "NicheOverlap",
+  data = pyro_500m,
+  rhs  = pyro,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_pyroNicheOverlap_250m <- fit_one(
+  resp = "NicheOverlap",
+  data = pyro_250m,
   rhs  = pyro,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
 ##################################################################################
-# -- Functional diversity as a function of land cover weighted proximity area -- #
+# -- Bee and interaction response as a function source habitat -- #
 ##################################################################################
-load('../data/landcover/LandscapeMetricsResults.RData')
-landscapeWPA <- left_join(landscapeWPA, spec.net.SR, by = c("Site", "Year"),
-                         relationship = "many-to-many")
+HabitatArea <- HabitatArea |>
+  mutate(Year = factor(as.numeric(as.character(Year)) + 1))
+  
+SourceHabitat <- left_join(HabitatArea, spec.net, by = c("Site", "Year"),
+                           relationship = "many-to-many") 
+SourceHabitat <- SourceHabitat |> 
+  summarise(
+    deciduous_forest = first(Area_ha_Deciduous_Forest),
+    evergreen_forest = first(Area_ha_Evergreen_Forest),
+    grassland = first(Area_ha_Herbaceous),
+    BeeFDivSiteYearSR = first(BeeFDivSiteYearSR),
+    BeeFDisSiteYearSR = first(BeeFDisSiteYearSR),
+    BeeRichness = first(BeeRichness),
+    BeeDiversity = first(BeeDiversity),
+    BeeAbundance = first(BeeAbundance),
+    IntRichnessSiteYearSR = first(IntRichnessSiteYearSR), 
+    IntDiversitySiteYearSR = first(IntDiversitySiteYearSR),
+    UniqueIntSiteYearSR = first(UniqueIntSiteYearSR),
+    NicheOverlap = first(NicheOverlap),
+    .by = c(Site, Year, SampleRound, Buffer_m)
+  )
 
-landscapeWPA500m <- landscapeWPA %>% 
-  filter(Decay_Rate == 500)
+SourceHabitat_250m <- SourceHabitat %>% 
+  filter(Buffer_m == 250)
 
-landscapeWPA1000m <- landscapeWPA %>% 
-  filter(Decay_Rate == 1000)
+SourceHabitat_500m <- SourceHabitat %>% 
+  filter(Buffer_m == 500)
 
-landscapeWPA1500m <- landscapeWPA %>% 
-  filter(Decay_Rate == 1500)
+SourceHabitat_1000m <- SourceHabitat %>% 
+  filter(Buffer_m == 1000)
+
+pairs(SourceHabitat_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
+                             "BeeDiversity", "BeeRichness", "BeeAbundance", 
+                             "NicheOverlap", "IntRichnessSiteYearSR",
+                             "IntDiversitySiteYearSR", "UniqueIntSiteYearSR",
+                             "deciduous_forest", "evergreen_forest", "grassland")])
 
 landscape <- "scale(deciduous_forest) +
               scale(evergreen_forest) +
-              scale(grassland) +
-              (1|Year) + (1|Site)"
+              scale(grassland) + (1|Site)"
+# 
+# get_prior(BeeDiversity ~ scale(deciduous_forest) + scale(evergreen_forest) + 
+#             scale(grassland) + (1 | Site), 
+#           data = SourceHabitat_1000m, family = skew_normal())
 
- # landscapeWPA %>% 
-#   ggplot(aes(x = evergreen_forest, y = BeeFDisSiteYear)) +
-#   geom_point() +
-#   geom_smooth(method = "lm") +
-#   facet_wrap(~ Year + Decay_Rate)
-
-# Dispersion
-m_FDIsLandscape1500m <- fit_one(
+###### Dispersion #######
+m_FDIsHabitat1000m <- fit_one(
   resp = "BeeFDisSiteYearSR",
-  data = landscapeWPA1500m,
+  data = SourceHabitat_1000m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_FDIsLandscape1000m <- fit_one(
+m_FDIsHabitat500m <- fit_one(
   resp = "BeeFDisSiteYearSR",
-  data = landscapeWPA1000m,
+  data = SourceHabitat_500m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_FDIsLandscape500m <- fit_one(
+m_FDIsHabitat250m <- fit_one(
   resp = "BeeFDisSiteYearSR",
-  data = landscapeWPA500m,
+  data = SourceHabitat_250m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-
-# Divergence
-m_FDIvLandscape1500m <- fit_one(
+###### Divergence ######
+m_FDIvHabitat1000m <- fit_one(
   resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA1500m,
+  data = SourceHabitat_1000m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_FDIvLandscape1000m <- fit_one(
+m_FDIvHabitat500m <- fit_one(
   resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA1000m,
+  data = SourceHabitat_500m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-#Weak posterior support
-m_FDIvLandscape500m <- fit_one(
+m_FDIvHabitat250m <- fit_one(
   resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA500m,
+  data = SourceHabitat_250m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-# Diversity
-m_DiversityLandspape1500m <- fit_one(
+###### Diversity ######
+## what effect sizes are plausible on the scale of my response?
+## Weakly informative priors scaled to the response 
+pri <- c(
+  prior(normal(0, 0.5), class = b),
+  prior(exponential(2), class = sd),   
+  prior(exponential(1), class = sigma)
+)
+
+m_DiversityHabitat1000m <- fit_one(
   resp = "BeeDiversity",
-  data = landscapeWPA1500m,
+  data = SourceHabitat_1000m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_DiversityLandspape1000m <- fit_one(
+m_DiversityHabitat500m <- fit_one(
   resp = "BeeDiversity",
-  data = landscapeWPA1000m,
+  data = SourceHabitat_500m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_DiversityLandspape500m <- fit_one(
+m_DiversityHabitat250m <- fit_one(
   resp = "BeeDiversity",
-  data = landscapeWPA500m,
+  data = SourceHabitat_250m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-# Richness
-m_RichLandspape1500m <- fit_one(
+###### Richness #######
+m_RichnessHabitat1000m <- fit_one(
   resp = "BeeRichness",
-  data = landscapeWPA1500m,
+  data = SourceHabitat_1000m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
-
-m_RichLandspape1000m <- fit_one(
+# 96% posterior support for negative relationship with deciduous forest
+# 96% posteroir support for positive relationship with grassland
+m_RichnessHabitat500m <- fit_one(
   resp = "BeeRichness",
-  data = landscapeWPA1000m,
+  data = SourceHabitat_500m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_RichLandspape500m <- fit_one(
+m_RichnessHabitat250m <- fit_one(
   resp = "BeeRichness",
-  data = landscapeWPA500m,
+  data = SourceHabitat_250m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-# Abundance
-m_AbundLandspape1500m <- fit_one(
+####### Abundance ########
+m_AbundHabitat1000m <- fit_one(
   resp = "BeeAbundance",
-  data = landscapeWPA1500m,
+  data = SourceHabitat_1000m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_AbundLandspape1000m <- fit_one(
+## 96% posteroir support for positive relationship with grassland
+m_AbundHabitat500m <- fit_one(
   resp = "BeeAbundance",
-  data = landscapeWPA1000m,
+  data = SourceHabitat_500m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-m_AbundLandspape500m <- fit_one(
+m_AbundHabitat250m <- fit_one(
   resp = "BeeAbundance",
-  data = landscapeWPA500m,
+  data = SourceHabitat_250m,
   rhs  = landscape,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
+###### Interaction Richness ######
 
+## 94% posterior support for positive relationship with grassland
+m_IntRichnessHabitat1000m <- fit_one(
+  resp = "IntRichnessSiteYearSR",
+  data = SourceHabitat_1000m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+## 98% posterior support for positive relationship with grassland
+m_IntRichnessHabitat500m <- fit_one(
+  resp = "IntRichnessSiteYearSR",
+  data = SourceHabitat_500m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_IntRichnessHabitat250m <- fit_one(
+  resp = "IntRichnessSiteYearSR",
+  data = SourceHabitat_250m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+###### Interaction Diversity ######
+m_IntDiversityHabitat1000m <- fit_one(
+  resp = "IntDiversitySiteYearSR",
+  data = SourceHabitat_1000m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+## 95% posterior support for positive relationship with grassland
+m_IntDiversityHabitat500m <- fit_one(
+  resp = "IntDiversitySiteYearSR",
+  data = SourceHabitat_500m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_IntDiversityHabitat250m <- fit_one(
+  resp = "IntDiversitySiteYearSR",
+  data = SourceHabitat_250m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+###### Unique Interactions ######
+
+## 14 divergent transitions
+## 95% posterior support for positive relationship with grassland
+m_UniqIntHabitat1000m <- fit_one(
+  resp = "UniqueIntSiteYearSR",
+  data = SourceHabitat_1000m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+## 2 divergent transitions
+## 99% posterior support for positive relationship with grassland
+m_UniqIntHabitat500m <- fit_one(
+  resp = "UniqueIntSiteYearSR",
+  data = SourceHabitat_500m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+## 96% posterior support for negative relationship with deciduous forest
+## 95% posterior support for positive relationship with grassland
+m_UniqIntHabitat250m <- fit_one(
+  resp = "UniqueIntSiteYearSR",
+  data = SourceHabitat_250m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+###### Niche Overlap ######
+m_NicheOverlapHabitat1000m <- fit_one(
+  resp = "NicheOverlap",
+  data = SourceHabitat_1000m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_NicheOverlapHabitat500m <- fit_one(
+  resp = "NicheOverlap",
+  data = SourceHabitat_500m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
+
+m_NicheOverlapHabitat250m <- fit_one(
+  resp = "NicheOverlap",
+  data = SourceHabitat_250m,
+  rhs  = landscape,
+  family = skew_normal(),
+  pp_type = "dens_overlay"
+)
 ########################################################
 ## --       Model Selection and Power Analysis      --##
 ########################################################
@@ -268,60 +637,63 @@ m_AbundLandspape500m <- fit_one(
 #BIC model selection, function gives score, summary function compares all
 #Limitation - not many sites, little prairie remaining / study system
 #Include power analysis in supplement
+pyroHabitat <- SourceHabitat_500m |>
+  left_join(
+    pyro_500m |> select(Site, Year, SampleRound, VegDiversity, Pyrodiversity),
+    by = c("Site", "Year", "SampleRound"))
 
-fm <- "scale(pyrodiv) + 
-          scale(VegDiversity) + 
-          scale(grassland) +
-          scale(evergreen_forest) +
-          scale(deciduous_forest) +
-         (1|Site)"
 
-m1 <- "scale(pyrodiv) + 
-          scale(VegDiversity) + 
-          scale(grassland) +
-          scale(deciduous_forest) +
-         (1|Site)"
-
-m2 <- "scale(pyrodiv) + 
+fm <- "scale(Pyrodiversity) + 
           scale(VegDiversity) + 
           scale(grassland) +
          (1|Site)"
 
-m3 <- "scale(pyrodiv) + 
-          scale(VegDiversity) + 
-         (1|Site)"
+# m1 <- "scale(pyrodiv) + 
+#           scale(VegDiversity) + 
+#           scale(grassland) +
+#           scale(deciduous_forest) +
+#          (1|Site)"
+# 
+# m2 <- "scale(pyrodiv) + 
+#           scale(VegDiversity) + 
+#           scale(grassland) +
+#          (1|Site)"
+# 
+# m3 <- "scale(pyrodiv) + 
+#           scale(VegDiversity) + 
+#          (1|Site)"
 
 FullMod <- fit_one(
   resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA500m,
+  data = pyroHabitat,
   rhs  = fm,
   family = skew_normal(),
   pp_type = "dens_overlay"
 )
 
-mod1 <- fit_one(
-  resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA500m,
-  rhs  = m1,
-  family = skew_normal(),
-  pp_type = "dens_overlay"
-)
-
-mod2 <- fit_one(
-  resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA500m,
-  rhs  = m2,
-  family = skew_normal(),
-  pp_type = "dens_overlay"
-)
-
-mod3 <- fit_one(
-  resp = "BeeFDivSiteYearSR",
-  data = landscapeWPA500m,
-  rhs  = m3,
-  family = skew_normal(),
-  pp_type = "dens_overlay"
-)
+# mod1 <- fit_one(
+#   resp = "BeeFDivSiteYearSR",
+#   data = landscapeWPA500m,
+#   rhs  = m1,
+#   family = skew_normal(),
+#   pp_type = "dens_overlay"
+# )
+# 
+# mod2 <- fit_one(
+#   resp = "BeeFDivSiteYearSR",
+#   data = landscapeWPA500m,
+#   rhs  = m2,
+#   family = skew_normal(),
+#   pp_type = "dens_overlay"
+# )
+# 
+# mod3 <- fit_one(
+#   resp = "BeeFDivSiteYearSR",
+#   data = landscapeWPA500m,
+#   rhs  = m3,
+#   family = skew_normal(),
+#   pp_type = "dens_overlay"
+# )
 
 ## Model comparison using Leave-One-Out Cross-Validation (LOO-CV)
 ## Model at top is best fit
@@ -423,48 +795,169 @@ powerBeeRich <- brms_inla_power(
 # Save Models for Later Use, Reload in
 ############################################################################ 
 
-models_pyro <- list(
-  "Functional Dispersion"          = m_pyroFDis,
-  "Functional Divergence"           = m_pyroFDiv,
-  "Bee Diversity"     = m_pyroPollDiversity,
-  "Bee Richness"      = m_pyroPollRichness,
-  "Bee Abundance"      = m_pyroAbundance)
+###### Pyrodiversity and Veg Diversity Models #######
+models_pyro_1000m <- list(
+  "Functional Dispersion"          = m_pyroFDis_1000m,
+  "Functional Divergence"           = m_pyroFDiv_1000m,
+  "Bee Diversity"     = m_pyroPollDiversity_1000m,
+  "Bee Richness"      = m_pyroPollRichness_1000m,
+  "Bee Abundance"      = m_pyroAbundance_1000m,
+  "Interaction Richness" = m_pyroIntRichness_1000m,
+  "Interaction Diversity" = m_pyroIntDiversity_1000m,
+  "Unique Interactions" = m_pyroUniqInt_1000m,
+  "Niche Overlap" = m_pyroNicheOverlap_1000m)
 
-models_landscape <- list(
-  "Functional Dispersion"  = m_FDIsLandscape500m,
-  "Functional Divergence"  = m_FDIvLandscape500m,
-  "Bee Diversity"          = m_DiversityLandspape500m,
-  "Bee Richness"           = m_RichLandspape500m,
-  "Bee Abundance"          = m_AbundLandspape500m)
+models_pyro_500m <- list(
+  "Functional Dispersion"          = m_pyroFDis_500m,
+  "Functional Divergence"           = m_pyroFDiv_500m,
+  "Bee Diversity"     = m_pyroPollDiversity_500m,
+  "Bee Richness"      = m_pyroPollRichness_500m,
+  "Bee Abundance"      = m_pyroAbundance_500m,
+  "Interaction Richness" = m_pyroIntRichness_500m,
+  "Interaction Diversity" = m_pyroIntDiversity_500m,
+  "Unique Interactions" = m_pyroUniqInt_500m,
+  "Niche Overlap" = m_pyroNicheOverlap_500m)
+
+models_pyro_250m <- list(
+  "Functional Dispersion"          = m_pyroFDis_250m,
+  "Functional Divergence"           = m_pyroFDiv_250m,
+  "Bee Diversity"     = m_pyroPollDiversity_250m,
+  "Bee Richness"      = m_pyroPollRichness_250m,
+  "Bee Abundance"      = m_pyroAbundance_250m,
+  "Interaction Richness" = m_pyroIntRichness_250m,
+  "Interaction Diversity" = m_pyroIntDiversity_250m,
+  "Unique Interactions" = m_pyroUniqInt_250m,
+  "Niche Overlap" = m_pyroNicheOverlap_250m)
+
+##### Source Habitat Models #######
+models_habitat_1000m <- list(
+  "Functional Dispersion"  = m_FDIsHabitat1000m,
+  "Functional Divergence"  = m_FDIvHabitat1000m,
+  "Bee Diversity"          = m_DiversityHabitat1000m,
+  "Bee Richness"           = m_RichnessHabitat1000m,
+  "Bee Abundance"          = m_AbundHabitat1000m,
+  "Interaction Richness" = m_IntRichnessHabitat1000m,
+  "Interaction Diversity" = m_IntDiversityHabitat1000m,
+  "Unique Interactions" = m_UniqIntHabitat1000m,
+  "Niche Overlap" = m_NicheOverlapHabitat1000m
+)
+
+models_habitat_500m <- list(
+  "Functional Dispersion"  = m_FDIsHabitat500m,
+  "Functional Divergence"  = m_FDIvHabitat500m,
+  "Bee Diversity"          = m_DiversityHabitat500m,
+  "Bee Richness"           = m_RichnessHabitat500m,
+  "Bee Abundance"          = m_AbundHabitat500m,
+  "Interaction Richness" = m_IntRichnessHabitat500m,
+  "Interaction Diversity" = m_IntDiversityHabitat500m,
+  "Unique Interactions" = m_UniqIntHabitat500m,
+  "Niche Overlap" = m_NicheOverlapHabitat500m
+)
+
+##### Source Habitat Models #######
+models_habitat_250m <- list(
+  "Functional Dispersion"  = m_FDIsHabitat250m,
+  "Functional Divergence"  = m_FDIvHabitat250m,
+  "Bee Diversity"          = m_DiversityHabitat250m,
+  "Bee Richness"           = m_RichnessHabitat250m,
+  "Bee Abundance"          = m_AbundHabitat250m,
+  "Interaction Richness" = m_IntRichnessHabitat250m,
+  "Interaction Diversity" = m_IntDiversityHabitat250m,
+  "Unique Interactions" = m_UniqIntHabitat250m,
+  "Niche Overlap" = m_NicheOverlapHabitat250m
+)
 
 # Save pp_checks 
 pp_types <- c("dens_overlay")
 
-dir.create("figures/pp_checks", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah/pyrodiversity/1000m", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah/pyrodiversity/500m", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah/pyrodiversity/250m", recursive = TRUE, showWarnings = FALSE)
 
-savePPCheck(models_pyro,
+dir.create("figures/pp_checks/pisgah/habitat/1000m", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah/habitat/500m", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah/habitat/250m", recursive = TRUE, showWarnings = FALSE)
+
+savePPCheck(models_pyro_1000m,
             pp_types = "dens_overlay",
-            out_dir  = "figures/pp_checks",
+            out_dir  = "figures/pp_checks/pisgah/pyrodiversity/1000m",
             ndraws   = 1000,
             width    = 12,
             height   = 6,
-            prefix = "Pyrodiversity")
+            prefix = "Pyrodiversity1000m_")
 
-savePPCheck(models_landscape,
+savePPCheck(models_pyro_500m,
             pp_types = "dens_overlay",
-            out_dir  = "figures/pp_checks",
+            out_dir  = "figures/pp_checks/pisgah/pyrodiversity/500m",
             ndraws   = 1000,
             width    = 12,
             height   = 6,
-            prefix = "Landscape")
+            prefix = "Pyrodiversity500m_")
+
+savePPCheck(models_pyro_250m,
+            pp_types = "dens_overlay",
+            out_dir  = "figures/pp_checks/pisgah/pyrodiversity/250m",
+            ndraws   = 1000,
+            width    = 12,
+            height   = 6,
+            prefix = "Pyrodiversity250m_")
+
+savePPCheck(models_habitat_1000m,
+            pp_types = "dens_overlay",
+            out_dir  = "figures/pp_checks/pisgah/habitat/1000m",
+            ndraws   = 1000,
+            width    = 12,
+            height   = 6,
+            prefix = "habitat1000m_")
+
+savePPCheck(models_habitat_500m,
+            pp_types = "dens_overlay",
+            out_dir  = "figures/pp_checks/pisgah/habitat/500m",
+            ndraws   = 1000,
+            width    = 12,
+            height   = 6,
+            prefix = "habitat500_")
+
+savePPCheck(models_habitat_250m,
+            pp_types = "dens_overlay",
+            out_dir  = "figures/pp_checks/pisgah/habitat/250m",
+            ndraws   = 1000,
+            width    = 12,
+            height   = 6,
+            prefix = "habitat250_")
 
 ## Save models to reload
-save_models_list(models_pyro,  "brms_models/pyrodiversity")
-save_models_list(models_landscape, "brms_models/landscape")
+dir.create("brms_models/pisgah", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/pyrodiversity", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/pyrodiversity/1000m", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/pyrodiversity/500m", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/pyrodiversity250m", recursive = TRUE, showWarnings = FALSE)
+
+dir.create("brms_models/pisgah/habitat", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/habitat/1000m", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/habitat/500m", recursive = TRUE, showWarnings = FALSE)
+dir.create("brms_models/pisgah/habitat/250m", recursive = TRUE, showWarnings = FALSE)
+
+save_models_list(models_pyro_1000m,  "brms_models/pisgah/pyrodiversity/1000m")
+save_models_list(models_pyro_500m,  "brms_models/pisgah/pyrodiversity/500m")
+save_models_list(models_pyro_250m,  "brms_models/pisgah/pyrodiversity/250m")
+
+save_models_list(models_pyro_1000m,  "brms_models/pisgah/habitat/1000m")
+save_models_list(models_pyro_500m,  "brms_models/pisgah/habitat/500m")
+save_models_list(models_pyro_250m,  "brms_models/pisgah/habitat/250m")
+
 
 ## Reload models if returning to script
-pyro_files <- list.files("brms_models/pyrodiversity", pattern = "\\.rds$", full.names = TRUE)
-landscape_files <- list.files("brms_models/landscape", pattern = "\\.rds$", full.names = TRUE)
+pyro_files <- list.files("brms_models/pisgah/pyrodiversity/1000m", pattern = "\\.rds$", full.names = TRUE)
+pyro_files <- list.files("brms_models/pisgah/pyrodiversity/500m", pattern = "\\.rds$", full.names = TRUE)
+pyro_files <- list.files("brms_models/pisgah/pyrodiversity/250m", pattern = "\\.rds$", full.names = TRUE)
+
+
+landscape_files <- list.files("brms_models/pisgah/habitat/1000m", pattern = "\\.rds$", full.names = TRUE)
+landscape_files <- list.files("brms_models/pisgah/habitat/500m", pattern = "\\.rds$", full.names = TRUE)
+landscape_files <- list.files("brms_models/pisgah/habitat/250m", pattern = "\\.rds$", full.names = TRUE)
+
 
 models_pyro <- setNames(
   lapply(pyro_files, readRDS),
@@ -475,24 +968,23 @@ models_landscape <- setNames(
   tools::file_path_sans_ext(basename(landscape_files))
 )
 
-
 ## Save results to CSV
-dir.create("results", showWarnings = FALSE, recursive = TRUE)
+dir.create("results/pisgah", showWarnings = FALSE, recursive = TRUE)
 
-pyro_sigs <- summarise_fixed(models_pyro, "results/fixed_effects_pyro.csv")
+pyro_sigs <- summarise_fixed(models_pyro, "results/pisgah/fixed_effects_pyro.csv")
 
-landscape_sigs <- summarise_fixed(models_landscape, "results/fixed_effects_landscape.csv")
+landscape_sigs <- summarise_fixed(models_landscape, "results/pisgah/fixed_effects_habitat.csv")
 
-pyro_sigs <- read.csv("results/fixed_effects_pyro.csv")
+pyro_sigs <- read.csv("results/pisgah/fixed_effects_pyro.csv")
 
-landscape_sigs <- read.csv('results/fixed_effects_landscape.csv')
+landscape_sigs <- read.csv('results/pisgah/fixed_effects_habitat.csv')
 
 ############################################################################ 
 ## Plotting 
 ############################################################################ 
 
-dir.create("figures/pyro/all_metrics", showWarnings = FALSE, recursive = TRUE)
-dir.create("figures/landscape/all_metrics", showWarnings = FALSE, recursive = TRUE)
+dir.create("figures/pisgah/pyro/all_metrics", showWarnings = FALSE, recursive = TRUE)
+dir.create("figures/pisgah/habitat/all_metrics", showWarnings = FALSE, recursive = TRUE)
 
 ## Predictors to plot (raw scale; model applies log1p + scale internally
 pyro_predictors <- list(
@@ -509,9 +1001,9 @@ landscape_predictors <- list(
 # Loop over predictors and save one faceted plot per predictor
 purrr::iwalk(pyro_predictors, function(xinfo, nm) {
   p <- plot_continuous(models_pyro, spec.net.SR, x = xinfo[[1]], xlab = xinfo[[2]])
-
+  
   ggplot2::ggsave(
-    filename = paste0("figures/pyro/all_metrics/", nm, "_all_metrics.pdf"),
+    filename = paste0("figures/pisgah/pyro/all_metrics/", nm, "_all_metrics.pdf"),
     plot     = p,
     width    = 10,
     height   = 6)})
@@ -520,7 +1012,7 @@ purrr::iwalk(landscape_predictors, function(xinfo, nm) {
   p <- plot_continuous(models_landscape, landscapeWPA500m, x = xinfo[[1]], xlab = xinfo[[2]])
   
   ggplot2::ggsave(
-    filename = paste0("figures/landscape/all_metrics/", nm, "_all_metrics.pdf"),
+    filename = paste0("figures/pisgah/landscape/all_metrics/", nm, "_all_metrics.pdf"),
     plot     = p,
     width    = 10,
     height   = 6)})
@@ -530,37 +1022,37 @@ c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "
 
 # Plot pyrodiversity model
 plotsPyro <- plotNiceModels(models_pyro,
-              sig_table    = pyro_sigs,
-              ncol         = 3,
-              focal_var    = "pyrodiv",
-              focal_scaled = "scale(pyrodiv)",
-              x_label      = "Pyrodiversity",
-              y_label      = c(
-                  "Bee Abundance",
-                  "Bee Diversity",
-                  "Bee Richness",
-                  "Functional Dispersion",
-                  "Functional Divergence"),
-              lookup_term    = "scalepyrodiv",
-              sig_only_solid = TRUE,
-              colour         = "#E69F00")
+                            sig_table    = pyro_sigs,
+                            ncol         = 3,
+                            focal_var    = "pyrodiv",
+                            focal_scaled = "scale(pyrodiv)",
+                            x_label      = "Pyrodiversity",
+                            y_label      = c(
+                              "Bee Abundance",
+                              "Bee Diversity",
+                              "Bee Richness",
+                              "Functional Dispersion",
+                              "Functional Divergence"),
+                            lookup_term    = "scalepyrodiv",
+                            sig_only_solid = TRUE,
+                            colour         = "#E69F00")
 
 # Plot Evergreen Forest
 plotsEvergreen <- plotNiceModels(models_landscape, 
-                    sig_table    = landscape_sigs, 
-                    ncol         = 3,
-                    focal_var    = "evergreen_forest",           
-                    focal_scaled = "scale(evergreen_forest)",   
-                    x_label      = "Evergreen Forest (ha)",
-                    y_label = c(
-                      "Bee Abundance",
-                      "Bee Diversity",
-                      "Bee Richness",
-                      "Functional Dispersion",
-                      "Functional Divergence"),
-                    lookup_term  = "scaleevergreen_forest",
-                    sig_only_solid = TRUE,
-                    colour = "#009E73")
+                                 sig_table    = landscape_sigs, 
+                                 ncol         = 3,
+                                 focal_var    = "evergreen_forest",           
+                                 focal_scaled = "scale(evergreen_forest)",   
+                                 x_label      = "Evergreen Forest (ha)",
+                                 y_label = c(
+                                   "Bee Abundance",
+                                   "Bee Diversity",
+                                   "Bee Richness",
+                                   "Functional Dispersion",
+                                   "Functional Divergence"),
+                                 lookup_term  = "scaleevergreen_forest",
+                                 sig_only_solid = TRUE,
+                                 colour = "#009E73")
 
 # Plot Deciduous Forest
 plotsDeciduous <- plotNiceModels(models_landscape, 
@@ -581,20 +1073,20 @@ plotsDeciduous <- plotNiceModels(models_landscape,
 
 # Plot Prairie
 plotsPrairie <- plotNiceModels(models_landscape, 
-                                 sig_table    = landscape_sigs, 
-                                 ncol         = 3,
-                                 focal_var    = "grassland",           
-                                 focal_scaled = "scale(grassland)",   
-                                 x_label      = "Prairie (ha)",
-                                 y_label = c(
-                                   "Bee Abundance",
-                                   "Bee Diversity",
-                                   "Bee Richness",
-                                   "Functional Dispersion",
-                                   "Functional Divergence"),
-                                 lookup_term  = "scaledeciduous_forest",
-                                 sig_only_solid = TRUE,
-                                 colour = "#009E73")
+                               sig_table    = landscape_sigs, 
+                               ncol         = 3,
+                               focal_var    = "grassland",           
+                               focal_scaled = "scale(grassland)",   
+                               x_label      = "Prairie (ha)",
+                               y_label = c(
+                                 "Bee Abundance",
+                                 "Bee Diversity",
+                                 "Bee Richness",
+                                 "Functional Dispersion",
+                                 "Functional Divergence"),
+                               lookup_term  = "scaledeciduous_forest",
+                               sig_only_solid = TRUE,
+                               colour = "#009E73")
 
 
 
@@ -614,16 +1106,16 @@ plotsPrairie <- plotNiceModels(models_landscape,
 
 
 ggsave(filename = "PyroFDPlots.jpg", plot = plotsPyro, 
-       path = "figures/pyro/all_metrics/", width = 10, height = 6)
+       path = "figures/pisgah/pyro/all_metrics/", width = 10, height = 6)
 
 ggsave(filename = "Prairie.jpg", plot = plotsPrairie, 
-       path = "figures/landscape/all_metrics/", width = 10, height = 6)
+       path = "figures/pisgah/landscape/all_metrics/", width = 10, height = 6)
 
 ggsave(filename = "Evergreen.jpg", plot = plotsEvergreen, 
-       path = "figures/landscape/all_metrics/", width = 10, height = 6)
+       path = "figures/pisgah/landscape/all_metrics/", width = 10, height = 6)
 
 ggsave(filename = "Deciduous.jpg", plot = plotsDeciduous, 
-       path = "figures/landscape/all_metrics/", width = 10, height = 6)
+       path = "figures/pisgah/landscape/all_metrics/", width = 10, height = 6)
 
 # Subset
 plot_models_pyrodiv(models_pyro, metrics = c("Pyrodivspec.netis", "PyrodivFEve"))
