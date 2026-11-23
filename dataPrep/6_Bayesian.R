@@ -32,6 +32,7 @@ source("src/save_models.R")
 source("src/plot_models.R")
 source("src/summarize_models.R")
 source("src/plot_flexible.R")
+source("src/fit_MLModel.R")
 
 pyrodiversity <- pyrodiversity |> 
   rename(Site = site, Year = year, 
@@ -75,6 +76,62 @@ spec.net <- spec.net %>%
     NicheOverlap = first(niche.overlap.HL),
     .by = c(Site, Year, SampleRound, buffer_m)) 
 
+pyro_250m <- spec.net |> 
+  filter(buffer_m == 250)
+
+pyro_500m <- spec.net |> 
+  filter(buffer_m == 500)
+
+pyro_1000m <- spec.net |> 
+  filter(buffer_m == 1000)
+
+####### Visualize #######
+pairs(pyro_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
+                    "BeeDiversity", "BeeRichness", "BeeAbundance", 
+                    "NicheOverlap", "IntRichnessSiteYearSR",
+                    "IntDiversitySiteYearSR", "UniqueIntSiteYearSR",
+                    "VegDiversity", "Pyrodiversity")])
+
+#####################################################################
+##  Multilevel Models
+#####################################################################
+## Floral Model
+flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + (1 | Site), family = gaussian())
+
+
+######Divergence#######
+bees   <- bf(BeeFDivSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + (1 | Site), family = skew_normal())
+
+ml_vegPyroBeeFDiv <- fit_ml(
+  flowers + bees, 
+  data = pyro_500m)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroBeeFDiv, "b_VegDiversity_scalePyrodiversity", "b_BeeFDivSiteYearSR_VegDiversity")
+
+#######Diversity#########
+bees   <- bf(BeeDiversity ~ scale(Pyrodiversity) + VegDiversity + (1 | Site), family = skew_normal())
+
+ml_vegPyroBeeDiversity <- fit_ml(
+  flowers + bees, 
+  data = pyro_500m)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroBeeDiversity, "b_VegDiversity_scalePyrodiversity", "b_BeeDiversity_VegDiversity")
+
+#######Interaction Diversity###########
+bees   <- bf(IntDiversitySiteYearSR ~ scale(Pyrodiversity) + VegDiversity + (1 | Site), family = skew_normal())
+
+ml_vegPyroIntDiversity <- fit_ml(
+  flowers + bees, 
+  data = pyro_500m)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroIntDiversity, "b_VegDiversity_scalePyrodiversity", "b_IntDiversitySiteYearSR_VegDiversity")
+
+## To save models
+summarise_fixed_ml(list(plants_bees = fit_mv1), "output/mv_fixed.csv")
+
 #####################################################################
 ##  Bee response as a function of pyrodiversity and veg diversity ###
 #####################################################################
@@ -91,22 +148,6 @@ pyro <- c("scale(Pyrodiversity) +
 #   prior(normal(0, 0.15), class = sd),       
 #   prior(normal(0.2, 0.3), class = Intercept)
 # )
-
-pyro_250m <- spec.net |> 
-  filter(buffer_m == 250)
-
-pyro_500m <- spec.net |> 
-  filter(buffer_m == 500)
-
-pyro_1000m <- spec.net |> 
-  filter(buffer_m == 1000)
-
-####### Visualize #######
-pairs(pyro_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
-                    "BeeDiversity", "BeeRichness", "BeeAbundance", 
-                    "NicheOverlap", "IntRichnessSiteYearSR",
-                    "IntDiversitySiteYearSR", "UniqueIntSiteYearSR",
-                    "VegDiversity", "Pyrodiversity")])
 
 ######### Dispersion ##########
 m_pyroFDis_1000m <- fit_one(
@@ -167,7 +208,7 @@ m_pyroPollDiversity_1000m <- fit_one(
   resp = "BeeDiversity",
   data = pyro_1000m,
   rhs  = pyro,
-  family = skew_normal(),
+  family = gaussian(),
   pp_type = "dens_overlay"
 )
 
@@ -175,7 +216,7 @@ m_pyroPollDiversity_500m <- fit_one(
   resp = "BeeDiversity",
   data = pyro_500m,
   rhs  = pyro,
-  family = skew_normal(),
+  family = gaussian(),
   pp_type = "dens_overlay"
 )
 
@@ -183,7 +224,7 @@ m_pyroPollDiversity_250m <- fit_one(
   resp = "BeeDiversity",
   data = pyro_250m,
   rhs  = pyro,
-  family = skew_normal(),
+  family = gaussian(),
   pp_type = "dens_overlay"
 )
 
