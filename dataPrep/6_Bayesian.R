@@ -25,6 +25,7 @@ dir.bombus <- file.path(local.path, "prairie/dataPrep")
 setwd(dir.bombus)
 load('../data/spec_traits.Rdata')
 load('../data/landcover/HabitatArea.RData')
+climate <- read.csv("../data/climate/climate.csv")
 pyrodiversity <- read.csv('../data/pyrodiversity/pisgahBurnResults.csv')
 
 source("src/fit_model.R")
@@ -58,23 +59,41 @@ spec.net <- spec.net |>
          Year = as.factor(Year)) |> 
   filter(Site != "VP")
 
-####### Site + Year + Sample Round level ########
+
+climate <- climate %>% 
+  # mutate(Site = case_when(
+  #   Site == "Glacial" ~ "Glacial Heritage",
+  #   Site == "Wolf" ~ "Wolf Haven",
+  #   TRUE ~ Site)) |> 
+  mutate(Site = as.factor(Site),
+         SampleRound = as.factor(SampleRound),
+         Year= as.factor(Year))
+
+
+## Prep Pyrodiversity, Climate, and Spec Data ##
 spec.net <- spec.net %>% 
-  left_join(pyrodiversity, by = c("Site", "Year"), 
-            relationship = "many-to-many") %>% 
+  left_join(climate, by = c("Site", "Year", "SampleRound")) %>% 
+  left_join(pyrodiversity, by = c("Site", "Year"), relationship = "many-to-many") %>% 
   summarise(
     BeeFDivSiteYearSR = first(BeeFDivSiteYearSR),
     BeeFDisSiteYearSR = first(BeeFDisSiteYearSR),
+    BeeFEveSiteYearSR = first(BeeFEveSiteYearSR),
     BeeRichness = first(BeeRichness),
     BeeDiversity = first(BeeDiversity),
     BeeAbundance = first(BeeAbundance),
+    IntRichnessSiteYearSR = first(IntRichnessSiteYearSR), 
+    IntDiversitySiteYearSR = first(IntDiversitySiteYearSR),
+    UniqueIntSiteYearSR = first(UniqueIntSiteYearSR),
+    NicheOverlap = first(niche.overlap.HL),
     VegDiversity = first(VegDiversity),
     Pyrodiversity = first(Pyrodiversity),
-    IntRichnessSiteYearSR = first(IntRichnessSiteYearSR),   
-    IntDiversitySiteYearSR = first(IntDiversitySiteYearSR),       
-    UniqueIntSiteYearSR  = first(UniqueIntSiteYearSR),
-    NicheOverlap = first(niche.overlap.HL),
-    .by = c(Site, Year, SampleRound, buffer_m)) 
+    GDD = first(GDD),
+    .by = c(Site, Year, SampleRound, buffer_m))
+# APi = first(APi),
+# logBeeFDivSiteYearSR = log(BeeFDivSiteYearSR),
+# logBeeFDisSiteYearSR = log(BeeFDisSiteYearSR), 
+# logBeeFEveSiteYearSR = log(BeeFEveSiteYearSR)) 
+
 
 pyro_250m <- spec.net |> 
   filter(buffer_m == 250)
@@ -88,9 +107,235 @@ pyro_1000m <- spec.net |>
 ####### Visualize #######
 pairs(pyro_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
                     "BeeDiversity", "BeeRichness", "BeeAbundance", 
-                    "NicheOverlap", "IntRichnessSiteYearSR",
-                    "IntDiversitySiteYearSR", "UniqueIntSiteYearSR",
-                    "VegDiversity", "Pyrodiversity")])
+                    "VegDiversity", "Pyrodiversity", "GDD")])
+
+### Prep source habitat data ####
+HabitatArea <- HabitatArea |>
+  mutate(Year = factor(as.numeric(as.character(Year)) + 1))
+
+SourceHabitat <- left_join(HabitatArea, spec.net, by = c("Site", "Year"),
+                           relationship = "many-to-many") 
+SourceHabitat <- SourceHabitat |> 
+  summarise(
+    deciduous_forest = first(Area_ha_Deciduous_Forest),
+    evergreen_forest = first(Area_ha_Evergreen_Forest),
+    grassland = first(Area_ha_Herbaceous),
+    BeeFDivSiteYearSR = first(BeeFDivSiteYearSR),
+    BeeFDisSiteYearSR = first(BeeFDisSiteYearSR),
+    BeeFEveSiteYearSR = first(BeeFEveSiteYearSR),
+    BeeRichness = first(BeeRichness),
+    BeeDiversity = first(BeeDiversity),
+    BeeAbundance = first(BeeAbundance),
+    IntRichnessSiteYearSR = first(IntRichnessSiteYearSR), 
+    IntDiversitySiteYearSR = first(IntDiversitySiteYearSR),
+    UniqueIntSiteYearSR = first(UniqueIntSiteYearSR),
+    NicheOverlap = first(NicheOverlap),
+    .by = c(Site, Year, SampleRound, Buffer_m)
+  )
+
+SourceHabitat_250m <- SourceHabitat %>% 
+  filter(Buffer_m == 250)
+
+SourceHabitat_500m <- SourceHabitat %>% 
+  filter(Buffer_m == 500)
+
+SourceHabitat_1000m <- SourceHabitat %>% 
+  filter(Buffer_m == 1000)
+
+### Visualize ####
+pairs(SourceHabitat_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
+                             "BeeDiversity", "BeeRichness", "BeeAbundance", 
+                             "deciduous_forest", "evergreen_forest", "grassland")])
+
+### Prep combine Data ###
+### 500 m is where we see effects of landscape and pyrodiversity ###
+pyroHabitat <- SourceHabitat_500m |> 
+  select(Site, Year, SampleRound, deciduous_forest, evergreen_forest, grassland) |> 
+  left_join(pyro_500m, by = c("Site", "Year", "SampleRound"))
+
+#####################################################################
+##  Multilevel Models
+# Does more diverse fire history lead to more diverse flowers?
+# Does more diverse vegetation lead to more diverse bees?
+# Does pyrodiversity affect bees only through vegetation (indirect), or also directly?
+
+#####################################################################
+## Questions for Lauren ##
+## 1. Can I include buffer radius in the model or do I need to model them separately? 
+## 2. Include GDD in veg model in hierarchical model
+## 3. Do I need to subset the data to exclude rows with NAs? (e.g., divergence + dispersion)
+## 4. Do I need to put source habitat in the hierarchical model too or keep separate?
+## 5. Susan had a strong direct effect of pyrodiversity on bee diversity, whats up with that?
+
+## Floral Model
+flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + scale(GDD) + (1 | Site), family = gaussian())
+
+######Dispersion#######
+bees   <- bf(BeeFDisSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + 
+               scale(grassland) + scale(deciduous_forest) + 
+               (1 | Site), family = skew_normal())
+
+ml_vegPyroBeeFDis <- fit_ml(
+  flowers + bees, 
+  data = pyroHabitat)
+
+mcmc_plot(ml_vegPyroBeeFDis)
+mcmc_trace(ml_vegPyroBeeFDis)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroBeeFDis, "b_VegDiversity_scalePyrodiversity", "b_BeeFDisSiteYearSR_VegDiversity")
+
+######Divergence#######
+bees   <- bf(BeeFDivSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + 
+               scale(grassland) + scale(deciduous_forest) + 
+               (1 | Site), family = skew_normal())
+
+ml_vegPyroBeeFDiv <- fit_ml(
+  flowers + bees, 
+  data = pyroHabitat)
+
+mcmc_plot(ml_vegPyroBeeFDiv)
+mcmc_trace(ml_vegPyroBeeFDiv)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroBeeFDiv, "b_VegDiversity_scalePyrodiversity", "b_BeeFDivSiteYearSR_VegDiversity")
+
+#######Diversity#########
+bees   <- bf(BeeDiversity ~ scale(Pyrodiversity) + VegDiversity + 
+               scale(grassland) + scale(deciduous_forest) + 
+               (1 | Site), family = skew_normal())
+
+ml_vegPyroBeeDiversity <- fit_ml(
+  flowers + bees, 
+  data = pyroHabitat)
+
+mcmc_plot(ml_vegPyroBeeDiversity)
+mcmc_trace(ml_vegPyroBeeDiversity)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroBeeDiversity, "b_VegDiversity_scalePyrodiversity", "b_BeeDiversity_VegDiversity")
+
+#######Interaction Diversity###########
+bees   <- bf(IntDiversitySiteYearSR ~ scale(Pyrodiversity) + VegDiversity +
+               scale(grassland) + scale(deciduous_forest) +
+               (1 | Site), family = skew_normal())
+
+ml_vegPyroIntDiversity <- fit_ml(
+  flowers + bees, 
+  data = pyroHabitat)
+
+mcmc_plot(ml_vegPyroIntDiversity)
+mcmc_trace(ml_vegPyroIntDiversity)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroIntDiversity, "b_VegDiversity_scalePyrodiversity", "b_IntDiversitySiteYearSR_VegDiversity")
+
+#######Niche Overlap###########
+bees   <- bf(NicheOverlap ~ scale(Pyrodiversity) + VegDiversity +
+               scale(grassland) + scale(deciduous_forest) +
+               (1 | Site), family = skew_normal())
+
+ml_vegPyroNiche <- fit_ml(
+  flowers + bees, 
+  data = pyroHabitat)
+
+mcmc_plot(ml_vegPyroNiche)
+mcmc_trace(ml_vegPyroNiche)
+
+## To test for indirect association
+indirect_effect(ml_vegPyroNiche, "b_VegDiversity_scalePyrodiversity", "b_NicheOverlap_VegDiversity")
+
+
+## To save models
+ML_Models <- list(
+  "Functional Dispersion"  = ml_vegPyroBeeFDis,
+  "Functional Divergence"  = ml_vegPyroBeeFDiv,
+  "Bee Diversity"          = ml_vegPyroBeeDiversity,
+  "Interaction Diversity"  = ml_vegPyroIntDiversity,
+  "Niche Overlap (HL)"     = ml_vegPyroNiche
+)
+
+dir.create("brms_models/puget", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/puget", recursive = TRUE, showWarnings = FALSE)
+dir.create("results/puget", showWarnings = FALSE, recursive = TRUE)
+
+save_models_list(ML_Models,  "brms_models/puget/ML_Models")
+
+summarise_fixed_ml(ML_Models, "results/ml_fixed.csv")
+
+savePPCheck(ML_Models,
+            pp_types = "dens_overlay",
+            out_dir  = "figures/pp_checks/puget/ML_Models",
+            ndraws   = 1000,
+            width    = 12,
+            height   = 6,
+            prefix   = "MLModel")
+
+ML_files <- list.files("brms_models/puget/ML_Models", pattern = "\\.rds$", full.names = TRUE)
+
+
+models_ML <- setNames(
+  lapply(ML_files, readRDS),
+  tools::file_path_sans_ext(basename(ML_files)))
+
+
+####################################
+######     Plot     ################
+####################################
+dispersionPlot <- plot_path_effects(
+  ml_vegPyroBeeFDis,
+  predictor = "scalePyrodiversity", 
+  mediator  = "VegDiversity",
+  response  = "BeeFDisSiteYearSR",
+  labels = c(a = "Pyrodiversity -> Veg Diversity",
+             b = "Veg diversity -> Bee Dispersion",
+             direct = "Pyrodiversity (Direct) -> Bee Dispersion",
+             indirect = "Pyrodiversity (Indirect) -> Bee Dispersion"), 
+  return_data = TRUE)
+dispersionPlot
+
+divergencePlot <- plot_path_effects(
+  ml_vegPyroBeeFDiv,
+  predictor = "scalePyrodiversity", 
+  mediator  = "VegDiversity",
+  response  = "BeeFDivSiteYearSR",
+  labels = c(a = "Pyrodiversity -> Veg Diversity",
+             b = "Veg diversity -> Bee Divergence",
+             direct = "Pyrodiversity (Direct) -> Bee Divergence",
+             indirect = "Pyrodiversity (Indirect) -> Bee Divergence"), 
+  return_data = TRUE)
+divergencePlot
+
+
+diversityPlot <- plot_path_effects(
+  ml_vegPyroBeeDiversity,
+  predictor = "scalePyrodiversity", 
+  mediator  = "VegDiversity",
+  response  = "BeeDiversity",
+  labels = c(a = "Pyrodiversity -> Veg Diversity",
+             b = "Veg diversity -> Bee Diversity",
+             direct = "Pyrodiversity (Direct) -> Bee Diversity",
+             indirect = "Pyrodiversity (Indirect) -> Bee Diversity"), 
+  return_data = TRUE)
+
+# get the draws 
+diversityPlot$data %>% group_by(path) %>% median_qi(value, .width = 0.95)
+
+IntDiversityPlot <- plot_path_effects(
+  ml_vegPyroIntDiversity,
+  predictor = "scalePyrodiversity", 
+  mediator  = "VegDiversity",
+  response  = "IntDiversitySiteYearSR",
+  labels = c(a = "Pyrodiversity -> Veg Diversity",
+             b = "Veg diversity -> Interaction Diversity",
+             direct = "Pyrodiversity (Direct) -> Interaction Diversity",
+             indirect = "Pyrodiversity (Indirect) -> Interaction Diversity"), 
+  return_data = TRUE)
+
+#####################################################################
+##  Bee response as a function of pyrodiversity and veg diversity ###
+#####################################################################
+
 
 #####################################################################
 ##  Multilevel Models
@@ -378,71 +623,10 @@ m_pyroNicheOverlap_250m <- fit_one(
   pp_type = "dens_overlay"
 )
 
-#######################################################
-## -- Veg diversity as a function of pyrodiversity -- ##
-########################################################
-######### Niche Overlap - Network Level ##########
-pyro <- c("Pyrodiversity + (1|Site)")
-
-m_pyroVegDiversity_1000m <- fit_one(
-  resp = "VegDiversity",
-  data = pyro_1000m,
-  rhs  = pyro,
-  family = skew_normal(),
-  pp_type = "dens_overlay"
-)
-
-m_pyroVegDiversity_500m <- fit_one(
-  resp = "VegDiversity",
-  data = pyro_500m,
-  rhs  = pyro,
-  family = skew_normal(),
-  pp_type = "dens_overlay"
-)
-
-m_pyroVegDiversity_250m <- fit_one(
-  resp = "VegDiversity",
-  data = pyro_250m,
-  rhs  = pyro,
-  family = skew_normal(),
-  pp_type = "dens_overlay"
-)
-
 
 ##################################################################################
 # -- Bee and interaction response as a function source habitat -- #
 ##################################################################################
-HabitatArea <- HabitatArea |>
-  mutate(Year = factor(as.numeric(as.character(Year)) + 1))
-  
-SourceHabitat <- left_join(HabitatArea, spec.net, by = c("Site", "Year"),
-                           relationship = "many-to-many") 
-SourceHabitat <- SourceHabitat |> 
-  summarise(
-    deciduous_forest = first(Area_ha_Deciduous_Forest),
-    evergreen_forest = first(Area_ha_Evergreen_Forest),
-    grassland = first(Area_ha_Herbaceous),
-    BeeFDivSiteYearSR = first(BeeFDivSiteYearSR),
-    BeeFDisSiteYearSR = first(BeeFDisSiteYearSR),
-    BeeRichness = first(BeeRichness),
-    BeeDiversity = first(BeeDiversity),
-    BeeAbundance = first(BeeAbundance),
-    IntRichnessSiteYearSR = first(IntRichnessSiteYearSR), 
-    IntDiversitySiteYearSR = first(IntDiversitySiteYearSR),
-    UniqueIntSiteYearSR = first(UniqueIntSiteYearSR),
-    NicheOverlap = first(NicheOverlap),
-    .by = c(Site, Year, SampleRound, Buffer_m)
-  )
-
-SourceHabitat_250m <- SourceHabitat %>% 
-  filter(Buffer_m == 250)
-
-SourceHabitat_500m <- SourceHabitat %>% 
-  filter(Buffer_m == 500)
-
-SourceHabitat_1000m <- SourceHabitat %>% 
-  filter(Buffer_m == 1000)
-
 pairs(SourceHabitat_500m[, c("BeeFDisSiteYearSR", "BeeFDivSiteYearSR",
                              "BeeDiversity", "BeeRichness", "BeeAbundance", 
                              "NicheOverlap", "IntRichnessSiteYearSR",
