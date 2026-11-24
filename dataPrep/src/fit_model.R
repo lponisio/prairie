@@ -11,9 +11,9 @@ fit_one <- function(resp, data, rhs,
                     adapt_delta = 0.99,
                     seed    = 123,
                     pp_type = c("dens_overlay", "hist", "scatter_avg", "intervals", "stat"),
-                    backend = "cmdstanr") {
-  
-  options(cmdstanr_verbose = FALSE)
+                    backend = "cmdstanr",
+                    verbose = TRUE,
+                    prior = NULL) {
   
   # Validate pp_type; defaults to "dens_overlay" if unspecified
   pp_type <- match.arg(pp_type)
@@ -41,8 +41,9 @@ fit_one <- function(resp, data, rhs,
     init    = 0,     # initialize chains at 0 to reduce early divergences
     threads = threads,
     backend = backend,
+    silent  = 2,
     refresh = 0,
-    silent = 1
+    prior = prior
   )
   
   # --- Convergence diagnostics ---
@@ -131,49 +132,3 @@ summarise_fixed <- function(models, out_csv) {
   tab
 }
 
-# Posterior direction for all population-level (b_*) coefficients
-# Works with response-prefixed names (b_BeeAbundance_Pyro_s, etc.)
-posterior_direction_mv <- function(m, prob = 0.95) {
-  d     <- posterior::as_draws_df(m)
-  bcols <- grep("^b_", names(d), value = TRUE)
-  lo <- (1 - prob) / 2
-  hi <- 1 - lo
-  
-  out <- do.call(rbind, lapply(bcols, function(p) {
-    x <- d[[p]]
-    data.frame(
-      term      = sub("^b_", "", p),
-      estimate  = mean(x),
-      std.error = sd(x),
-      conf.low  = unname(quantile(x, lo)),
-      conf.high = unname(quantile(x, hi)),
-      Pgt0      = mean(x > 0),
-      Plt0      = mean(x < 0),
-      direction = ifelse(mean(x > 0) >= mean(x < 0), "positive", "negative")
-    )
-  }))
-  rownames(out) <- NULL
-  out
-}
-
-# Combine fixed-effect tables across several fitted models and save to CSV
-summarise_fixed_mv <- function(models, out_csv) {
-  tab <- purrr::imap_dfr(models, function(fit, model_name) {
-    cbind(model = model_name, posterior_direction_mv(fit))
-  })
-  dir.create(dirname(out_csv), showWarnings = FALSE, recursive = TRUE)
-  utils::write.csv(tab, out_csv, row.names = FALSE)
-  tab
-}
-
-# Indirect effect (path a * path b) from posterior draws
-# e.g. indirect_effect(fit, "b_PlantRichness_Pyro_s", "b_BeeAbundance_PlantRichness")
-# Check exact names with: brms::variables(fit)
-indirect_effect <- function(m, a, b, prob = 0.95) {
-  d <- posterior::as_draws_df(m)
-  x <- d[[a]] * d[[b]]
-  c(mean = mean(x),
-    lower = unname(quantile(x, (1 - prob) / 2)),
-    upper = unname(quantile(x, 1 - (1 - prob) / 2)),
-    Pgt0  = mean(x > 0))
-}
