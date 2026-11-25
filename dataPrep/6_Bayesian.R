@@ -16,6 +16,8 @@ library(bayesplot)
 library(graphics)
 library(testthat)
 library(loo)
+library(car)
+library(performance)
 
 
 setwd('C:/')
@@ -160,13 +162,6 @@ pyroHabitat <- SourceHabitat_500m |>
 # Does pyrodiversity affect bees only through vegetation (indirect), or also directly?
 
 #####################################################################
-## Questions for Lauren ##
-## 1. Can I include buffer radius in the model or do I need to model them separately? 
-## 2. Include GDD in veg model in hierarchical model
-## 3. Do I need to subset the data to exclude rows with NAs? (e.g., divergence + dispersion)
-## 4. Do I need to put source habitat in the hierarchical model too or keep separate?
-## 5. Susan had a strong direct effect of pyrodiversity on bee diversity, whats up with that?
-
 ## Floral Model
 flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + scale(GDD) + (1 | Site), family = skew_normal())
 
@@ -332,53 +327,25 @@ IntDiversityPlot <- plot_path_effects(
              indirect = "Pyrodiversity (Indirect) -> Interaction Diversity"), 
   return_data = TRUE)
 
-#####################################################################
-##  Bee response as a function of pyrodiversity and veg diversity ###
-#####################################################################
-
 
 #####################################################################
-##  Multilevel Models
+###                Test for variance inflation                     ###
 #####################################################################
-## Floral Model
-flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + (1 | Site), family = gaussian())
 
+lm_Dispersion <- lmer(BeeFDisSiteYearSR ~ scale(Pyrodiversity) + VegDiversity +
+             scale(grassland) + scale(deciduous_forest) +
+             (1 | Site), data = pyroHabitat)
 
-######Divergence#######
-bees   <- bf(BeeFDivSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + (1 | Site), family = skew_normal())
+summary(lm_Dispersion)
+#Check model fit
+check_model(lm_Dispersion)
 
-ml_vegPyroBeeFDiv <- fit_ml(
-  flowers + bees, 
-  data = pyro_500m)
-
-## To test for indirect association
-indirect_effect(ml_vegPyroBeeFDiv, "b_VegDiversity_scalePyrodiversity", "b_BeeFDivSiteYearSR_VegDiversity")
-
-#######Diversity#########
-bees   <- bf(BeeDiversity ~ scale(Pyrodiversity) + VegDiversity + (1 | Site), family = skew_normal())
-
-ml_vegPyroBeeDiversity <- fit_ml(
-  flowers + bees, 
-  data = pyro_500m)
-
-## To test for indirect association
-indirect_effect(ml_vegPyroBeeDiversity, "b_VegDiversity_scalePyrodiversity", "b_BeeDiversity_VegDiversity")
-
-#######Interaction Diversity###########
-bees   <- bf(IntDiversitySiteYearSR ~ scale(Pyrodiversity) + VegDiversity + (1 | Site), family = skew_normal())
-
-ml_vegPyroIntDiversity <- fit_ml(
-  flowers + bees, 
-  data = pyro_500m)
-
-## To test for indirect association
-indirect_effect(ml_vegPyroIntDiversity, "b_VegDiversity_scalePyrodiversity", "b_IntDiversitySiteYearSR_VegDiversity")
-
-## To save models
-summarise_fixed_ml(list(plants_bees = fit_mv1), "output/mv_fixed.csv")
+#Check variance coefficient inflation (around 1 good)
+vif(lm_Dispersion)
 
 #####################################################################
 ##  Bee response as a function of pyrodiversity and veg diversity ###
+##      Compare model fit at different buffer radius's            ##
 #####################################################################
 
 pyro <- c("scale(Pyrodiversity) + 
