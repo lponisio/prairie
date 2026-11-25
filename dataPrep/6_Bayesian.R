@@ -168,6 +168,7 @@ flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + scale(GDD) + (1 | Site), fam
 ######Dispersion#######
 bees   <- bf(BeeFDisSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + 
                scale(grassland) + scale(deciduous_forest) + 
+               scale(evergreen_forest) +
                (1 | Site), family = skew_normal())
 
 ml_vegPyroBeeFDis <- fit_ml(
@@ -178,11 +179,12 @@ mcmc_plot(ml_vegPyroBeeFDis)
 mcmc_trace(ml_vegPyroBeeFDis)
 
 ## To test for indirect association
-indirect_effect(ml_vegPyroBeeFDis, "b_VegDiversity_scalePyrodiversity", "b_BeeFDisSiteYearSR_VegDiversity")
+indirect_effect(ml_vegPyroBeeFDis, "b_VegDiversity_scalePyrodiversity", "b_BeeFDisSiteYearSR_scaleVegDiversity")
 
 ######Divergence#######
 bees   <- bf(BeeFDivSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + 
                scale(grassland) + scale(deciduous_forest) + 
+               scale(evergreen_forest) +
                (1 | Site), family = skew_normal())
 
 ml_vegPyroBeeFDiv <- fit_ml(
@@ -193,11 +195,12 @@ mcmc_plot(ml_vegPyroBeeFDiv)
 mcmc_trace(ml_vegPyroBeeFDiv)
 
 ## To test for indirect association
-indirect_effect(ml_vegPyroBeeFDiv, "b_VegDiversity_scalePyrodiversity", "b_BeeFDivSiteYearSR_VegDiversity")
+indirect_effect(ml_vegPyroBeeFDiv, "b_VegDiversity_scalePyrodiversity", "b_BeeFDivSiteYearSR_scaleVegDiversity")
 
 #######Diversity#########
 bees   <- bf(BeeDiversity ~ scale(Pyrodiversity) + VegDiversity + 
-               scale(grassland) + scale(deciduous_forest) + 
+               scale(grassland) + scale(deciduous_forest) +
+               # scale(evergreen_forest) +
                (1 | Site), family = skew_normal())
 
 ml_vegPyroBeeDiversity <- fit_ml(
@@ -208,11 +211,12 @@ mcmc_plot(ml_vegPyroBeeDiversity)
 mcmc_trace(ml_vegPyroBeeDiversity)
 
 ## To test for indirect association
-indirect_effect(ml_vegPyroBeeDiversity, "b_VegDiversity_scalePyrodiversity", "b_BeeDiversity_VegDiversity")
+indirect_effect(ml_vegPyroBeeDiversity, "b_VegDiversity_scalePyrodiversity", "b_BeeDiversity_scaleVegDiversity")
 
 #######Interaction Diversity###########
 bees   <- bf(IntDiversitySiteYearSR ~ scale(Pyrodiversity) + VegDiversity +
                scale(grassland) + scale(deciduous_forest) +
+               scale(evergreen_forest) +
                (1 | Site), family = gaussian())
 
 ml_vegPyroIntDiversity <- fit_ml(
@@ -223,12 +227,13 @@ mcmc_plot(ml_vegPyroIntDiversity)
 mcmc_trace(ml_vegPyroIntDiversity)
 
 ## To test for indirect association
-indirect_effect(ml_vegPyroIntDiversity, "b_VegDiversity_scalePyrodiversity", "b_IntDiversitySiteYearSR_VegDiversity")
+indirect_effect(ml_vegPyroIntDiversity, "b_VegDiversity_scalePyrodiversity", "b_IntDiversitySiteYearSR_scaleVegDiversity")
 
 #######Niche Overlap###########
 bees   <- bf(NicheOverlap ~ scale(Pyrodiversity) + VegDiversity +
                scale(grassland) + scale(deciduous_forest) +
-               (1 | Site), family = student())
+               scale(evergreen_forest) +
+               (1 | Site), family = gaussian())
 
 ml_vegPyroNiche <- fit_ml(
   flowers + bees, 
@@ -238,7 +243,7 @@ mcmc_plot(ml_vegPyroNiche)
 mcmc_trace(ml_vegPyroNiche)
 
 ## To test for indirect association
-indirect_effect(ml_vegPyroNiche, "b_VegDiversity_scalePyrodiversity", "b_NicheOverlap_VegDiversity")
+indirect_effect(ml_vegPyroNiche, "b_VegDiversity_scalePyrodiversity", "b_NicheOverlap_scaleVegDiversity")
 
 
 ## To save models
@@ -256,7 +261,9 @@ dir.create("results/pisgah", showWarnings = FALSE, recursive = TRUE)
 
 save_models_list(ML_Models,  "brms_models/pisgah/ML_Models")
 
-summarise_fixed_ml(ML_Models, "results/ml_fixed.csv")
+summarise_fixed_ml(ML_Models, "results/pisgah/ml_fixed.csv")
+
+ml_sigs <- read.csv("results/pisgah/ml_fixed.csv")
 
 savePPCheck(ML_Models,
             pp_types = "dens_overlay",
@@ -1208,6 +1215,7 @@ landscape_sigs <- read.csv('results/pisgah/fixed_effects_habitat.csv')
 
 dir.create("figures/pisgah/pyro/all_metrics", showWarnings = FALSE, recursive = TRUE)
 dir.create("figures/pisgah/habitat/all_metrics", showWarnings = FALSE, recursive = TRUE)
+dir.create("figures/pisgah/heirarchical/all_metrics", showWarnings = FALSE, recursive = TRUE)
 
 ## Predictors to plot (raw scale; model applies log1p + scale internally
 pyro_predictors <- list(
@@ -1220,6 +1228,14 @@ landscape_predictors <- list(
   prairie   = c("grassland",        "Prairie (ha)")
 )
 
+ml_predictors <- list(
+  pyrodiversity = c("Pyrodiversity", "Pyrodiversity"),
+  vegdiversity = c("VegDiversity", "Floral Diversity"),
+  evergreen = c("evergreen_forest", "Evergreen Forest (ha)"),
+  deciduous = c("deciduous_forest", "Deciduous Forest (ha)"),
+  prairie   = c("grassland",        "Prairie (ha)"),
+  gdd       = c("GDD", "Growing Degree Days")
+)
 
 # Loop over predictors and save one faceted plot per predictor
 purrr::iwalk(pyro_predictors, function(xinfo, nm) {
@@ -1240,15 +1256,24 @@ purrr::iwalk(landscape_predictors, function(xinfo, nm) {
     width    = 10,
     height   = 6)})
 
+purrr::iwalk(ml_predictors, function(xinfo, nm) {
+  p <- plot_continuous(models_ML, pyroHabitat, x = xinfo[[1]], xlab = xinfo[[2]])
+  
+  ggplot2::ggsave(
+    filename = paste0("figures/pisgah/heirarchical/all_metrics/", nm, "_all_metrics.pdf"),
+    plot     = p,
+    width    = 10,
+    height   = 6)})
+
 #Color blind safe
 c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
 
 # Plot pyrodiversity model
-plotsPyro <- plotNiceModels(models_pyro,
-                            sig_table    = pyro_sigs,
+plotsPyro <- plotNiceModels(models_ML,
+                            sig_table    = ml_sigs,
                             ncol         = 3,
-                            focal_var    = "pyrodiv",
-                            focal_scaled = "scale(pyrodiv)",
+                            focal_var    = "Pyrodiversity",
+                            focal_scaled = "scale(Pyrodiversity)",
                             x_label      = "Pyrodiversity",
                             y_label      = c(
                               "Bee Abundance",
@@ -1256,13 +1281,13 @@ plotsPyro <- plotNiceModels(models_pyro,
                               "Bee Richness",
                               "Functional Dispersion",
                               "Functional Divergence"),
-                            lookup_term    = "scalepyrodiv",
+                            lookup_term    = "scalePyrodiversity",
                             sig_only_solid = TRUE,
                             colour         = "#E69F00")
 
 # Plot Evergreen Forest
-plotsEvergreen <- plotNiceModels(models_landscape, 
-                                 sig_table    = landscape_sigs, 
+plotsEvergreen <- plotNiceModels(models_ML, 
+                                 sig_table    = ml_sigs, 
                                  ncol         = 3,
                                  focal_var    = "evergreen_forest",           
                                  focal_scaled = "scale(evergreen_forest)",   
@@ -1275,11 +1300,11 @@ plotsEvergreen <- plotNiceModels(models_landscape,
                                    "Functional Divergence"),
                                  lookup_term  = "scaleevergreen_forest",
                                  sig_only_solid = TRUE,
-                                 colour = "#009E73")
+                                 colour = "#0072B2")
 
 # Plot Deciduous Forest
-plotsDeciduous <- plotNiceModels(models_landscape, 
-                                 sig_table    = landscape_sigs, 
+plotsDeciduous <- plotNiceModels(models_ML, 
+                                 sig_table    = ml_sigs, 
                                  ncol         = 3,
                                  focal_var    = "deciduous_forest",           
                                  focal_scaled = "scale(deciduous_forest)",   
@@ -1292,11 +1317,11 @@ plotsDeciduous <- plotNiceModels(models_landscape,
                                    "Functional Divergence"),
                                  lookup_term  = "scaledeciduous_forest",
                                  sig_only_solid = TRUE,
-                                 colour = "#009E73")
+                                 colour = "#0072B2")
 
 # Plot Prairie
-plotsPrairie <- plotNiceModels(models_landscape, 
-                               sig_table    = landscape_sigs, 
+plotsPrairie <- plotNiceModels(models_ML, 
+                               sig_table    = ml_sigs, 
                                ncol         = 3,
                                focal_var    = "grassland",           
                                focal_scaled = "scale(grassland)",   
@@ -1309,26 +1334,44 @@ plotsPrairie <- plotNiceModels(models_landscape,
                                  "Functional Divergence"),
                                lookup_term  = "scaledeciduous_forest",
                                sig_only_solid = TRUE,
+                               colour = "#0072B2")
+
+# Plot Floral Diversity Predictor
+plotsFloral <- plotNiceModels(models_ML, 
+                               sig_table    = ml_sigs, 
+                               ncol         = 3,
+                               focal_var    = "VegDiversity",           
+                               focal_scaled = "scale(VegDiversity)",   
+                               x_label      = "VegDiversity",
+                               y_label = c(
+                                 "Bee Abundance",
+                                 "Bee Diversity",
+                                 "Bee Richness",
+                                 "Functional Dispersion",
+                                 "Functional Divergence"),
+                               lookup_term  = "scaleVegDiversity",
+                               sig_only_solid = TRUE,
                                colour = "#009E73")
 
-
-
-# Plot Vegetation Rarefied Richness
-# plotsVeg <- plotNiceModels(models_pyro, 
-#                     sig_table    = pyro_sigs, 
-#                     ncol         = 2,
-#                     focal_var    = "VegRarefiedRichness",           
-#                     focal_scaled = "scale(VegRarefiedRichness)",   
-#                     x_label      = "Floral RareFied Richness",
-#                     y_label      = c(PyrodivFDis = "Functional Dispersion",
-#                                      PyrodivFDiv = "Functional Divergence",
-#                                      PyrodivFEve = "Functional Evenness"),
-#                     lookup_term  = "scaleVegRarefiedRichness",
-#                     sig_only_solid = TRUE,
-#                     colour = "#009E73")
+# Plot Floral Diversity Response
+plotsVegResp <- plot_marginal_effect(
+  models_ML[[1]],
+  focal_var    = "Pyrodiversity",
+  focal_scaled = "scale(Pyrodiversity)",
+  resp         = "VegDiversity",
+  x_label      = "Pyrodiversity",
+  y_label      = "Floral Diversity",
+  sig_table    = ml_sigs,
+  response     = "Functional Dispersion",   
+  lookup_term  = "scalePyrodiversity",    
+  colour       = "#009E73"
+)
 
 
 ggsave(filename = "PyroFDPlots.jpg", plot = plotsPyro, 
+       path = "figures/pisgah/pyro/all_metrics/", width = 10, height = 6)
+
+ggsave(filename = "PyroFDPlots.jpg", plot = plotsVegResp, 
        path = "figures/pisgah/pyro/all_metrics/", width = 10, height = 6)
 
 ggsave(filename = "Prairie.jpg", plot = plotsPrairie, 
@@ -1340,6 +1383,28 @@ ggsave(filename = "Evergreen.jpg", plot = plotsEvergreen,
 ggsave(filename = "Deciduous.jpg", plot = plotsDeciduous, 
        path = "figures/pisgah/landscape/all_metrics/", width = 10, height = 6)
 
+ggsave(filename = "FloralDiversity.jpg", plot = plotsFloral, 
+       path = "figures/pisgah/Floral/all_metrics/", width = 10, height = 6)
+
 # Subset
 plot_models_pyrodiv(models_pyro, metrics = c("Pyrodivspec.netis", "PyrodivFEve"))
+
+
+
+
+# Same order as names(models_ML)
+ylabs <- c("Functional Dispersion", "Functional Divergence", "Bee Diversity",
+           "Interaction Diversity", "Niche Overlap")
+
+# Predictor -> bee metric, one panel per model
+plotsPyro      <- plot_effect(models_ML, "Pyrodiversity",    y_label = ylabs, colour = "#E69F00")
+plotsFloral    <- plot_effect(models_ML, "VegDiversity",     y_label = ylabs, colour = "#009E73",
+                              x_label = "Floral Diversity")
+plotsPrairie   <- plot_effect(models_ML, "grassland",        y_label = ylabs, x_label = "Prairie (ha)")
+plotsDeciduous <- plot_effect(models_ML, "deciduous_forest", y_label = ylabs, x_label = "Deciduous Forest (ha)")
+plotsEvergreen <- plot_effect(models_ML, "evergreen_forest", y_label = ylabs, x_label = "Evergreen Forest (ha)")
+
+# Pyrodiversity -> Floral Diversity (the flowers submodel, from any one fit)
+p_veg <- plot_effect(models_ML[[1]], "Pyrodiversity", resp = "VegDiversity",
+                     y_label = "Floral Diversity", colour = "#009E73")
 
