@@ -340,7 +340,7 @@ summary(lm_Dispersion)
 #Check model fit
 check_model(lm_Dispersion)
 
-#Check variance coefficient inflation (around 1 good)
+#Check variance coefficient inflation (< 5 no colinearity)
 vif(lm_Dispersion)
 
 #####################################################################
