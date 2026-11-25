@@ -90,7 +90,8 @@ plot_marginal_effect <- function(model,
                                    prob_threshold = 0.95,
                                    show_points = TRUE,
                                    colour,
-                                   ribbon_fill = colour) {
+                                   ribbon_fill = colour,
+                                   resp = NULL) {
     
     # All scaled predictor columns (to zero out non-focal ones) 
     scaled_cols <- grep("^scale\\(", names(dat), value = TRUE)
@@ -119,7 +120,7 @@ plot_marginal_effect <- function(model,
     }
     
     # Extract posterior predictions 
-    pred    <- brms::posterior_epred(model, newdata = newdat, re_formula = NA)
+    pred    <- brms::posterior_epred(model, newdata = newdat, re_formula = NA, resp = resp)
     plotdat <- data.frame(
       focal = focal_seq,
       est   = apply(pred, 2, median),
@@ -136,7 +137,7 @@ plot_marginal_effect <- function(model,
           point_dat[[col]] <- 0  # simple scalar, not a matrix
       }
       
-      fitted_vals        <- brms::posterior_epred(model, newdata = point_dat, re_formula = NA)
+      fitted_vals        <- brms::posterior_epred(model, newdata = point_dat, re_formula = NA, resp = resp)
       point_dat$fitted   <- apply(fitted_vals, 2, median)  # write to point_dat, not dat
     }
     
@@ -287,6 +288,78 @@ plot_path_effects <- function(fit,
   
   if (return_data) return(list(plot = p, data = paths))
   p
+}
+
+plot_effect <- function(fits, focal, resp = NULL, data = NULL,
+                        x_label = focal, y_label = NULL,
+                        colour = "#0072B2", ci = 0.95, p_cut = 0.95,
+                        n = 100, ncol = 3) {
+  
+  # A list of fits gives one panel per fit
+  if (!inherits(fits, "brmsfit")) {
+    if (is.null(y_label)) y_label <- names(fits)
+    panels <- Map(function(f, yl) plot_effect(f, focal, resp, data, x_label, yl,
+                                              colour, ci, p_cut, n),
+                  fits, y_label)
+    return(wrap_plots(panels, ncol = ncol))
+  }
+  
+  fit <- fits
+  d   <- as_draws_df(fit)
+  dat <- fit$data
+  if (is.null(resp)) resp <- tail(names(fit$formula$forms), 1)
+  if (is.null(y_label)) y_label <- resp
+  
+  # Coefficients for this response, e.g. b_<resp>_scalePyrodiversity
+  pre   <- paste0("b_", resp, "_")
+  vars  <- variables(d)
+  terms <- substring(vars[startsWith(vars, pre)], nchar(pre) + 1)
+  terms <- setdiff(terms, "Intercept")
+  clean <- function(x) gsub("[^[:alnum:]_.]", "", x)   # "scale(x)" -> "scalex"
+  
+  focal_term <- intersect(c(paste0("scale", focal), focal), terms)[1]
+  if (is.na(focal_term))
+    stop("'", focal, "' is not a predictor of ", resp, ". Terms: ", paste(terms, collapse = ", "))
+  
+  # Raw focal values plus the centering/scaling the model used
+  if (startsWith(focal_term, "scale")) {
+    z  <- dat[[paste0("scale(", focal, ")")]]
+    sc <- attr(z, "scaled:center"); ss <- attr(z, "scaled:scale")
+    if (is.null(sc)) {                       # attributes lost: fall back on the raw data
+      if (is.null(data)) stop("Pass data = your data frame so the raw scale can be recovered.")
+      sc <- mean(data[[focal]], na.rm = TRUE); ss <- sd(data[[focal]], na.rm = TRUE)
+    }
+    raw <- as.numeric(z) * ss + sc
+  } else {
+    raw <- dat[[focal]]; sc <- 0; ss <- 1
+  }
+  
+  # Intercept plus every other predictor held at its mean
+  base <- d[[paste0(pre, "Intercept")]]
+  for (tm in setdiff(terms, focal_term)) {
+    col <- names(dat)[match(tm, clean(names(dat)))]
+    if (!is.na(col)) base <- base + d[[paste0(pre, tm)]] * mean(as.numeric(dat[[col]]), na.rm = TRUE)
+  }
+  
+  # Posterior line across the focal range (population level, no Site effects)
+  b  <- d[[paste0(pre, focal_term)]]
+  x  <- seq(min(raw, na.rm = TRUE), max(raw, na.rm = TRUE), length.out = n)
+  mu <- outer(base, rep(1, n)) + outer(b, (x - sc) / ss)
+  a  <- (1 - ci) / 2
+  line <- data.frame(x = x, est = apply(mu, 2, median),
+                     lo = apply(mu, 2, quantile, a), hi = apply(mu, 2, quantile, 1 - a))
+  
+  # Solid if at least p_cut of the posterior is on one side of zero
+  lt <- if (max(mean(b > 0), mean(b < 0)) >= p_cut) "solid" else "dashed"
+  
+  ggplot(line, aes(x, est)) +
+    geom_ribbon(aes(ymin = lo, ymax = hi), fill = colour, alpha = 0.15) +
+    geom_point(data = data.frame(x = raw, y = as.numeric(dat[[resp]])), aes(x, y),
+               colour = colour, alpha = 0.7, size = 2) +
+    geom_line(linewidth = 1, linetype = lt) +
+    labs(x = x_label, y = y_label) +
+    theme_classic() +
+    theme(axis.text = element_text(size = 14), axis.title = element_text(size = 14))
 }
 
 ## Color Safe Pallette

@@ -108,7 +108,7 @@ posterior_direction_mv <- function(m, prob = 0.95) {
 #using the posterior from the model by multiplying draw by draw to carry 
 #uncertainty from both paths into product then summarizes the distribution.
 indirect_effect <- function(m, a, b, prob = 0.95) {
-  c
+  d     <- posterior::as_draws_df(m)
   x <- d[[a]] * d[[b]]
   c(mean  = mean(x),
     lower = unname(quantile(x, (1 - prob) / 2)),
