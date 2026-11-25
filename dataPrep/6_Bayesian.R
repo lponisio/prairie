@@ -168,7 +168,7 @@ pyroHabitat <- SourceHabitat_500m |>
 ## 5. Susan had a strong direct effect of pyrodiversity on bee diversity, whats up with that?
 
 ## Floral Model
-flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + scale(GDD) + (1 | Site), family = gaussian())
+flowers <- bf(VegDiversity ~ scale(Pyrodiversity) + scale(GDD) + (1 | Site), family = skew_normal())
 
 ######Dispersion#######
 bees   <- bf(BeeFDisSiteYearSR  ~ scale(Pyrodiversity) + VegDiversity + 
@@ -218,7 +218,7 @@ indirect_effect(ml_vegPyroBeeDiversity, "b_VegDiversity_scalePyrodiversity", "b_
 #######Interaction Diversity###########
 bees   <- bf(IntDiversitySiteYearSR ~ scale(Pyrodiversity) + VegDiversity +
                scale(grassland) + scale(deciduous_forest) +
-               (1 | Site), family = skew_normal())
+               (1 | Site), family = gaussian())
 
 ml_vegPyroIntDiversity <- fit_ml(
   flowers + bees, 
@@ -233,7 +233,7 @@ indirect_effect(ml_vegPyroIntDiversity, "b_VegDiversity_scalePyrodiversity", "b_
 #######Niche Overlap###########
 bees   <- bf(NicheOverlap ~ scale(Pyrodiversity) + VegDiversity +
                scale(grassland) + scale(deciduous_forest) +
-               (1 | Site), family = skew_normal())
+               (1 | Site), family = student())
 
 ml_vegPyroNiche <- fit_ml(
   flowers + bees, 
@@ -255,23 +255,23 @@ ML_Models <- list(
   "Niche Overlap (HL)"     = ml_vegPyroNiche
 )
 
-dir.create("brms_models/puget", recursive = TRUE, showWarnings = FALSE)
-dir.create("figures/pp_checks/puget", recursive = TRUE, showWarnings = FALSE)
-dir.create("results/puget", showWarnings = FALSE, recursive = TRUE)
+dir.create("brms_models/pisgah", recursive = TRUE, showWarnings = FALSE)
+dir.create("figures/pp_checks/pisgah", recursive = TRUE, showWarnings = FALSE)
+dir.create("results/pisgah", showWarnings = FALSE, recursive = TRUE)
 
-save_models_list(ML_Models,  "brms_models/puget/ML_Models")
+save_models_list(ML_Models,  "brms_models/pisgah/ML_Models")
 
 summarise_fixed_ml(ML_Models, "results/ml_fixed.csv")
 
 savePPCheck(ML_Models,
             pp_types = "dens_overlay",
-            out_dir  = "figures/pp_checks/puget/ML_Models",
+            out_dir  = "figures/pp_checks/pisgah/ML_Models",
             ndraws   = 1000,
             width    = 12,
             height   = 6,
             prefix   = "MLModel")
 
-ML_files <- list.files("brms_models/puget/ML_Models", pattern = "\\.rds$", full.names = TRUE)
+ML_files <- list.files("brms_models/pisgah/ML_Models", pattern = "\\.rds$", full.names = TRUE)
 
 
 models_ML <- setNames(
